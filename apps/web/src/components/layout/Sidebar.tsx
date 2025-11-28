@@ -9,6 +9,7 @@ import {
   Map,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/brand/Logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -24,7 +25,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-64 flex-col border-r bg-card">
       <div className="flex h-16 items-center border-b px-6">
-        <span className="text-xl font-bold">Tracearr</span>
+        <Logo size="md" />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => (
