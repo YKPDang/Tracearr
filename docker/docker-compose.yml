@@ -1,6 +1,6 @@
 services:
   tracearr:
-    image: ghcr.io/connorgallopo/tracearr:v0.1.0-alpha.1
+    image: ghcr.io/connorgallopo/tracearr:latest
     ports:
       - "${PORT:-3000}:3000"
     environment:

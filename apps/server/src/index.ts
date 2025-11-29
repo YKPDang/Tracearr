@@ -90,9 +90,12 @@ async function buildApp() {
     app.log.warn('GeoIP database not available - location features disabled');
   }
 
-  // Security plugins
+  // Security plugins - relaxed for HTTP-only deployments
   await app.register(helmet, {
-    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    originAgentCluster: false,
   });
   await app.register(cors, {
     origin: process.env.CORS_ORIGIN ?? true,
