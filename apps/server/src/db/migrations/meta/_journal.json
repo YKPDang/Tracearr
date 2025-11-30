@@ -57,6 +57,13 @@
       "when": 1764461096276,
       "tag": "0007_spotty_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764476702099,
+      "tag": "0008_complete_rogue",
+      "breakpoints": true
     }
   ]
 }

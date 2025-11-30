@@ -205,6 +205,34 @@ async function createContinuousAggregates(): Promise<void> {
     GROUP BY hour, server_id
     WITH NO DATA
   `);
+
+  // Hourly play patterns (for hour-of-day analytics chart)
+  await db.execute(sql`
+    CREATE MATERIALIZED VIEW IF NOT EXISTS hourly_play_patterns
+    WITH (timescaledb.continuous) AS
+    SELECT
+      time_bucket('1 day', started_at) AS day,
+      EXTRACT(HOUR FROM started_at)::int AS hour_of_day,
+      COUNT(*) AS play_count,
+      SUM(COALESCE(duration_ms, 0)) AS total_duration_ms
+    FROM sessions
+    GROUP BY day, hour_of_day
+    WITH NO DATA
+  `);
+
+  // Daily play patterns (for day-of-week analytics chart)
+  await db.execute(sql`
+    CREATE MATERIALIZED VIEW IF NOT EXISTS daily_play_patterns
+    WITH (timescaledb.continuous) AS
+    SELECT
+      time_bucket('1 week', started_at) AS week,
+      EXTRACT(DOW FROM started_at)::int AS day_of_week,
+      COUNT(*) AS play_count,
+      SUM(COALESCE(duration_ms, 0)) AS total_duration_ms
+    FROM sessions
+    GROUP BY week, day_of_week
+    WITH NO DATA
+  `);
 }
 
 /**
@@ -234,6 +262,24 @@ async function setupRefreshPolicies(): Promise<void> {
       start_offset => INTERVAL '1 day',
       end_offset => INTERVAL '1 hour',
       schedule_interval => INTERVAL '30 minutes',
+      if_not_exists => true
+    )
+  `);
+
+  await db.execute(sql`
+    SELECT add_continuous_aggregate_policy('hourly_play_patterns',
+      start_offset => INTERVAL '30 days',
+      end_offset => INTERVAL '1 hour',
+      schedule_interval => INTERVAL '1 hour',
+      if_not_exists => true
+    )
+  `);
+
+  await db.execute(sql`
+    SELECT add_continuous_aggregate_policy('daily_play_patterns',
+      start_offset => INTERVAL '30 days',
+      end_offset => INTERVAL '1 hour',
+      schedule_interval => INTERVAL '1 hour',
       if_not_exists => true
     )
   `);
@@ -354,6 +400,8 @@ export async function initTimescaleDB(): Promise<{
     'daily_plays_by_user',
     'daily_plays_by_platform',
     'hourly_concurrent_streams',
+    'hourly_play_patterns',
+    'daily_play_patterns',
   ];
 
   const missingAggregates = expectedAggregates.filter(

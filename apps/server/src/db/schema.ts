@@ -48,18 +48,24 @@ export const servers = pgTable('servers', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Users from connected servers
+// Users from connected servers + Tracearr admins
+// Two types of users:
+// 1. Tracked users: have serverId + externalId, represent streaming users from Plex/Jellyfin
+// 2. Owner users: isOwner=true, may have passwordHash and/or plexAccountId for auth
 export const users = pgTable(
   'users',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    serverId: uuid('server_id')
-      .notNull()
-      .references(() => servers.id, { onDelete: 'cascade' }),
-    externalId: varchar('external_id', { length: 255 }).notNull(),
+    // Nullable for owner accounts created before adding a server
+    serverId: uuid('server_id').references(() => servers.id, { onDelete: 'cascade' }),
+    // Server-specific user ID (Plex user ID or Jellyfin GUID) - null for local-only owners
+    externalId: varchar('external_id', { length: 255 }),
     username: varchar('username', { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }),
     thumbUrl: text('thumb_url'),
+    // Authentication fields for owner accounts
+    passwordHash: text('password_hash'), // bcrypt hash for local login
+    plexAccountId: varchar('plex_account_id', { length: 255 }), // Plex.tv global account ID for "Login with Plex"
     isOwner: boolean('is_owner').notNull().default(false),
     allowGuest: boolean('allow_guest').notNull().default(false),
     trustScore: integer('trust_score').notNull().default(100),
@@ -69,6 +75,8 @@ export const users = pgTable(
   (table) => [
     index('users_server_id_idx').on(table.serverId),
     index('users_external_id_idx').on(table.serverId, table.externalId),
+    index('users_plex_account_id_idx').on(table.plexAccountId),
+    index('users_username_idx').on(table.username),
   ]
 );
 
@@ -131,6 +139,11 @@ export const sessions = pgTable(
     index('sessions_device_idx').on(table.userId, table.deviceId),
     index('sessions_reference_idx').on(table.referenceId), // For session grouping queries
     index('sessions_user_rating_idx').on(table.userId, table.ratingKey), // For resume detection
+    // Indexes for stats queries
+    index('sessions_geo_idx').on(table.geoLat, table.geoLon), // For /stats/locations
+    index('sessions_media_type_idx').on(table.mediaType), // For media type aggregations
+    index('sessions_transcode_idx').on(table.isTranscode), // For quality stats
+    index('sessions_platform_idx').on(table.platform), // For platform stats
   ]
 );
 
