@@ -190,13 +190,24 @@ export interface UserStats {
   watchTimeHours: number;
 }
 
+export interface LocationUserInfo {
+  id: string;
+  username: string;
+  thumbUrl: string | null;
+}
+
 export interface LocationStats {
   city: string | null;
+  region: string | null; // State/province
   country: string | null;
   lat: number;
   lon: number;
   count: number;
   lastActivity?: Date;
+  firstActivity?: Date;
+  // Contextual data - populated based on filters
+  users?: LocationUserInfo[]; // Top users at this location (when not filtering by userId)
+  deviceCount?: number; // Unique devices from this location
 }
 
 export interface LocationStatsSummary {
@@ -205,9 +216,16 @@ export interface LocationStatsSummary {
   topCity: string | null;
 }
 
+export interface LocationFilterOptions {
+  users: { id: string; username: string }[];
+  servers: { id: string; name: string }[];
+  mediaTypes: ('movie' | 'episode' | 'track')[];
+}
+
 export interface LocationStatsResponse {
   data: LocationStats[];
   summary: LocationStatsSummary;
+  availableFilters: LocationFilterOptions;
 }
 
 export interface LibraryStats {
