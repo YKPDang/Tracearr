@@ -235,6 +235,54 @@ export interface LibraryStats {
   tracks: number;
 }
 
+export interface DayOfWeekStats {
+  day: number; // 0 = Sunday, 6 = Saturday
+  name: string; // 'Sun', 'Mon', etc.
+  count: number;
+}
+
+export interface HourOfDayStats {
+  hour: number; // 0-23
+  count: number;
+}
+
+export interface QualityStats {
+  directPlay: number;
+  transcode: number;
+  total: number;
+  directPlayPercent: number;
+  transcodePercent: number;
+}
+
+export interface TopUserStats {
+  userId: string;
+  username: string;
+  thumbUrl: string | null;
+  serverId: string | null;
+  trustScore: number;
+  playCount: number;
+  watchTimeHours: number;
+  topMediaType: string | null; // "movie", "episode", etc.
+  topContent: string | null; // Most watched show/movie name
+}
+
+export interface TopContentStats {
+  title: string;
+  type: string;
+  showTitle: string | null; // For episodes, this is the show name
+  year: number | null;
+  playCount: number;
+  watchTimeHours: number;
+  thumbPath: string | null;
+  serverId: string | null;
+  ratingKey: string | null;
+}
+
+export interface PlatformStats {
+  platform: string | null;
+  count: number;
+}
+
 // Settings types
 export interface Settings {
   allowGuestAccess: boolean;

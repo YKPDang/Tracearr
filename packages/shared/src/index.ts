@@ -40,6 +40,12 @@ export type {
   LocationStatsSummary,
   LocationStatsResponse,
   LibraryStats,
+  DayOfWeekStats,
+  HourOfDayStats,
+  QualityStats,
+  TopUserStats,
+  TopContentStats,
+  PlatformStats,
   // Settings
   Settings,
   // Tautulli import
