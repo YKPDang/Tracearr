@@ -23,8 +23,8 @@ export const numberOrEmptyString = z.union([z.number(), z.literal('')]);
 // Zod schemas for runtime validation of Tautulli API responses
 // Exported for testing
 export const TautulliHistoryRecordSchema = z.object({
-  reference_id: z.number(), // API returns number, not string
-  row_id: z.number(),
+  reference_id: z.number().nullable(), // Can be null for active sessions
+  row_id: z.number().nullable(), // Can be null for active sessions
   date: z.number(),
   started: z.number(),
   stopped: z.number(),
@@ -62,10 +62,10 @@ export const TautulliHistoryRecordSchema = z.object({
   transcode_decision: z.string(),
   percent_complete: z.number(),
   watched_status: z.number(), // Can be 0, 0.75, 1 (decimal for partial watch)
-  group_count: z.number(),
-  group_ids: z.string(),
+  group_count: z.number().nullable(),
+  group_ids: z.string().nullable(),
   state: z.string().nullable(),
-  session_key: z.string().nullable(),
+  session_key: z.union([z.string(), z.number()]).nullable(),
 });
 
 export const TautulliHistoryResponseSchema = z.object({
@@ -368,6 +368,13 @@ export class TautulliService {
             continue;
           }
 
+          // Skip records without reference_id (active/in-progress sessions)
+          if (record.reference_id === null) {
+            skipped++;
+            progress.skippedRecords++;
+            continue;
+          }
+
           // Check for existing session by externalSessionId
           // Convert reference_id to string for DB comparison
           const referenceIdStr = String(record.reference_id);
@@ -453,10 +460,14 @@ export class TautulliService {
           }
 
           // Insert new session
+          // session_key can be string, number, or null - convert to string
+          const sessionKey = record.session_key != null
+            ? String(record.session_key)
+            : `tautulli-${record.reference_id}`;
           await db.insert(sessions).values({
             serverId,
             userId,
-            sessionKey: record.session_key ?? `tautulli-${record.reference_id}`,
+            sessionKey,
             // Convert rating_key to string (can be number or empty string from API)
             ratingKey: typeof record.rating_key === 'number' ? String(record.rating_key) : null,
             // reference_id is always a number from API, convert to string
