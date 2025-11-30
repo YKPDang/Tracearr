@@ -7,6 +7,7 @@ import { GEOIP_CONFIG } from '@tracearr/shared';
 
 export interface GeoLocation {
   city: string | null;
+  region: string | null; // State/province/subdivision
   country: string | null;
   countryCode: string | null;
   lat: number | null;
@@ -15,6 +16,7 @@ export interface GeoLocation {
 
 const NULL_LOCATION: GeoLocation = {
   city: null,
+  region: null,
   country: null,
   countryCode: null,
   lat: null,
@@ -23,6 +25,7 @@ const NULL_LOCATION: GeoLocation = {
 
 const LOCAL_LOCATION: GeoLocation = {
   city: 'Local',
+  region: null,
   country: 'Local Network',
   countryCode: null,
   lat: null,
@@ -73,8 +76,16 @@ export class GeoIPService {
         return NULL_LOCATION;
       }
 
+      // Get the most specific subdivision (state/province)
+      // MaxMind returns subdivisions as an array, most specific last
+      const subdivisions = result.subdivisions;
+      const region = subdivisions && subdivisions.length > 0
+        ? subdivisions[0]?.names?.en ?? null
+        : null;
+
       return {
         city: result.city?.names?.en ?? null,
+        region,
         country: result.country?.names?.en ?? null,
         countryCode: result.country?.iso_code ?? null,
         lat: result.location?.latitude ?? null,
