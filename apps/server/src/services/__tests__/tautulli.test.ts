@@ -31,14 +31,17 @@ import {
 const REAL_MOVIE_RECORD: TautulliHistoryRecord = {
   reference_id: 11650,
   row_id: 11650,
+  id: 11650,
   date: 1764488126,
   started: 1764488126,
   stopped: 1764494418,
   duration: 6292,
+  play_duration: 6292,
   paused_counter: 0,
   user_id: 374704766,
   user: 'lukelino',
   friendly_name: 'Luke Lino',
+  user_thumb: 'https://plex.tv/users/abc123/avatar',
   platform: 'Android',
   product: 'Plex for Android (TV)',
   player: 'AFTMM',
@@ -72,46 +75,50 @@ const REAL_MOVIE_RECORD: TautulliHistoryRecord = {
   session_key: null,
 };
 
+// Real episode record from actual API - note year IS a number for properly matched media
 const REAL_EPISODE_RECORD: TautulliHistoryRecord = {
-  reference_id: 11643,
-  row_id: 11643,
-  date: 1764433296,
-  started: 1764433296,
-  stopped: 1764434555,
-  duration: 1259,
-  paused_counter: 0,
-  user_id: 374704766,
-  user: 'lukelino',
-  friendly_name: 'Luke Lino',
-  platform: 'Android',
-  product: 'Plex for Android (TV)',
-  player: 'AFTMM',
-  ip_address: '73.160.197.140',
+  reference_id: 11627,
+  row_id: 11651,
+  id: 11651,
+  date: 1764524187,
+  started: 1764296397,
+  stopped: 1764527203,
+  duration: 3638,
+  play_duration: 3638,
+  paused_counter: 688,
+  user_id: 302613764,
+  user: 'ethanbyrum',
+  friendly_name: 'Ethan Byrum',
+  user_thumb: 'https://plex.tv/users/4345d655aa21f449/avatar?c=1764494415',
+  platform: 'tvOS',
+  product: 'Plex for Apple TV',
+  player: 'Apple TV',
+  ip_address: '104.128.161.124',
   live: 0,
-  machine_id: 'f7df5a3c0a1f6134-com-plexapp-android',
+  machine_id: '7C3AFE13-4063-46E6-94AD-92BC94337DDB',
   location: 'wan',
   secure: 1,
   relayed: 0,
   media_type: 'episode',
-  rating_key: 13619,
-  parent_rating_key: 13607,
-  grandparent_rating_key: 13599,
-  full_title: 'The Office (US) - The Injury',
-  title: 'The Injury',
-  parent_title: 'Season 2',
-  grandparent_title: 'The Office (US)',
+  rating_key: 128459,
+  parent_rating_key: 128458,
+  grandparent_rating_key: 110397,
+  full_title: 'Ozark - Wartime',
+  title: 'Wartime',
+  parent_title: 'Season 3',
+  grandparent_title: 'Ozark',
   original_title: '',
-  year: 2006,
-  media_index: 12,
-  parent_media_index: 2,
-  thumb: '/library/metadata/13607/thumb/1732302089',
-  originally_available_at: '2006-01-12',
-  guid: 'plex://episode/65dcf60c6534bf7f07ba3bc0',
+  year: 2020, // Episodes with proper metadata have numeric year
+  media_index: 1,
+  parent_media_index: 3,
+  thumb: '/library/metadata/128458/thumb/1764384847',
+  originally_available_at: '2020-03-27',
+  guid: 'plex://episode/5e8338265161b50041c98783',
   transcode_decision: 'direct play',
-  percent_complete: 100,
+  percent_complete: 95,
   watched_status: 1,
-  group_count: 1,
-  group_ids: '11643',
+  group_count: 2,
+  group_ids: '11627,11651',
   state: null,
   session_key: null,
 };
@@ -119,14 +126,17 @@ const REAL_EPISODE_RECORD: TautulliHistoryRecord = {
 const REAL_TRACK_RECORD: TautulliHistoryRecord = {
   reference_id: 10132,
   row_id: 10132,
+  id: 10132,
   date: 1759030514,
   started: 1759030514,
   stopped: 1759030705,
   duration: 191,
+  play_duration: 191,
   paused_counter: 0,
   user_id: 3453396,
   user: 'rdweaver79',
   friendly_name: 'Ryan Weaver',
+  user_thumb: 'https://plex.tv/users/def456/avatar',
   platform: 'Roku',
   product: 'Plex for Roku',
   player: 'Basement Roku',
@@ -164,9 +174,58 @@ const PARTIAL_WATCH_RECORD: TautulliHistoryRecord = {
   ...REAL_MOVIE_RECORD,
   reference_id: 11302,
   row_id: 11647,
+  id: 11647,
   percent_complete: 77,
   watched_status: 0.75, // Decimal for partial watch
   paused_counter: 4205,
+};
+
+// Unmatched/local media has empty string for year (guid starts with local://)
+const UNMATCHED_EPISODE_RECORD: TautulliHistoryRecord = {
+  reference_id: 11595,
+  row_id: 11595,
+  id: 11595,
+  date: 1764140689,
+  started: 1764140689,
+  stopped: 1764141093,
+  duration: 404,
+  play_duration: 404,
+  paused_counter: 0,
+  user_id: 330457530,
+  user: 'gwh.h',
+  friendly_name: 'Greg Howard Jr.',
+  user_thumb: 'https://plex.tv/users/6fac0fa09f00d318/avatar?c=1764496979',
+  platform: 'Android',
+  product: 'Plex for Android (Mobile)',
+  player: 'Pixel 7 Pro',
+  ip_address: '136.23.58.217',
+  live: 0,
+  machine_id: '7fb4d017bd220361-com-plexapp-android',
+  location: 'wan',
+  secure: 1,
+  relayed: 0,
+  media_type: 'episode',
+  rating_key: 127775,
+  parent_rating_key: 127774,
+  grandparent_rating_key: 127773,
+  full_title: '1923 - Episode 1',
+  title: 'Episode 1',
+  parent_title: 'Season 1',
+  grandparent_title: '1923',
+  original_title: '',
+  year: '', // Unmatched/local media has empty string for year
+  media_index: 1,
+  parent_media_index: 1,
+  thumb: '/library/metadata/127773/thumb/1764139222',
+  originally_available_at: '',
+  guid: 'local://127775', // Note: local:// guid indicates unmatched media
+  transcode_decision: 'direct play',
+  percent_complete: 3,
+  watched_status: 0,
+  group_count: 1,
+  group_ids: '11595',
+  state: null,
+  session_key: null,
 };
 
 const LOCAL_USER: TautulliUserRecord = {
@@ -241,8 +300,8 @@ describe('TautulliHistoryRecordSchema', () => {
       const result = TautulliHistoryRecordSchema.safeParse(REAL_EPISODE_RECORD);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.parent_rating_key).toBe(13607);
-        expect(result.data.grandparent_rating_key).toBe(13599);
+        expect(result.data.parent_rating_key).toBe(128458);
+        expect(result.data.grandparent_rating_key).toBe(110397);
       }
     });
 
@@ -250,8 +309,8 @@ describe('TautulliHistoryRecordSchema', () => {
       const result = TautulliHistoryRecordSchema.safeParse(REAL_EPISODE_RECORD);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.media_index).toBe(12);
-        expect(result.data.parent_media_index).toBe(2);
+        expect(result.data.media_index).toBe(1);
+        expect(result.data.parent_media_index).toBe(3);
       }
     });
 
@@ -259,9 +318,44 @@ describe('TautulliHistoryRecordSchema', () => {
       const result = TautulliHistoryRecordSchema.safeParse(REAL_EPISODE_RECORD);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.parent_title).toBe('Season 2');
-        expect(result.data.grandparent_title).toBe('The Office (US)');
+        expect(result.data.parent_title).toBe('Season 3');
+        expect(result.data.grandparent_title).toBe('Ozark');
       }
+    });
+
+    it('should handle numeric year for properly matched episodes', () => {
+      const result = TautulliHistoryRecordSchema.safeParse(REAL_EPISODE_RECORD);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.year).toBe(2020);
+      }
+    });
+  });
+
+  describe('unmatched/local media records', () => {
+    it('should validate unmatched media with empty string year', () => {
+      const result = TautulliHistoryRecordSchema.safeParse(UNMATCHED_EPISODE_RECORD);
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle empty string year for unmatched media', () => {
+      const result = TautulliHistoryRecordSchema.safeParse(UNMATCHED_EPISODE_RECORD);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.year).toBe('');
+      }
+    });
+
+    it('should handle empty originally_available_at for unmatched media', () => {
+      const result = TautulliHistoryRecordSchema.safeParse(UNMATCHED_EPISODE_RECORD);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.originally_available_at).toBe('');
+      }
+    });
+
+    it('should identify local guid pattern', () => {
+      expect(UNMATCHED_EPISODE_RECORD.guid).toMatch(/^local:\/\//);
     });
   });
 
@@ -565,7 +659,7 @@ describe('Field Mapping', () => {
 
     it('should preserve numeric media_index', () => {
       const result = convertMediaIndex(REAL_EPISODE_RECORD.media_index);
-      expect(result).toBe(12);
+      expect(result).toBe(1);
     });
 
     it('should convert empty string media_index to null', () => {
@@ -720,8 +814,9 @@ describe('User Matching Logic', () => {
 
     it('should increment count for repeated skipped user', () => {
       const skippedUsers = new Map<number, SkippedUser>();
+      // Use same user_id record twice to test increment
       trackSkippedUser(skippedUsers, REAL_MOVIE_RECORD);
-      trackSkippedUser(skippedUsers, REAL_EPISODE_RECORD); // Same user_id
+      trackSkippedUser(skippedUsers, { ...REAL_MOVIE_RECORD, reference_id: 99999 }); // Same user_id
 
       expect(skippedUsers.size).toBe(1);
       expect(skippedUsers.get(374704766)?.count).toBe(2);

@@ -21,51 +21,71 @@ const RETRY_DELAY_MS = 1000; // Base delay, will be multiplied by attempt number
 export const numberOrEmptyString = z.union([z.number(), z.literal('')]);
 
 // Zod schemas for runtime validation of Tautulli API responses
+// Based on actual API response from http://192.168.1.32:8181
 // Exported for testing
 export const TautulliHistoryRecordSchema = z.object({
-  reference_id: z.number().nullable(), // Can be null for active sessions
-  row_id: z.number().nullable(), // Can be null for active sessions
+  // IDs - can be null for active sessions
+  reference_id: z.number().nullable(),
+  row_id: z.number().nullable(),
+  id: z.number().nullable(), // Additional ID field
+
+  // Timestamps and durations - always numbers
   date: z.number(),
   started: z.number(),
   stopped: z.number(),
   duration: z.number(),
+  play_duration: z.number(), // Actual play time
   paused_counter: z.number(),
+
+  // User info
   user_id: z.number(),
   user: z.string(),
   friendly_name: z.string(),
+  user_thumb: z.string(), // User avatar URL
+
+  // Player/client info
   platform: z.string(),
   product: z.string(),
   player: z.string(),
   ip_address: z.string(),
-  live: z.number(),
   machine_id: z.string(),
   location: z.string(),
+
+  // Boolean-like flags (0/1)
+  live: z.number(),
   secure: z.number(),
   relayed: z.number(),
+
+  // Media info
   media_type: z.string(),
-  // rating_key fields are numbers for episodes, empty strings for movies
-  rating_key: numberOrEmptyString,
+  rating_key: z.number(), // Always number per actual API
+  // These CAN be empty string for movies, number for episodes
   parent_rating_key: numberOrEmptyString,
   grandparent_rating_key: numberOrEmptyString,
   full_title: z.string(),
   title: z.string(),
-  parent_title: z.string(), // Added - present in API
+  parent_title: z.string(),
   grandparent_title: z.string(),
   original_title: z.string(),
-  year: z.number(),
-  // media_index fields are numbers for episodes, empty strings for movies
+  // year: number for movies, empty string "" for episodes
+  year: numberOrEmptyString,
+  // media_index: number for episodes, empty string for movies
   media_index: numberOrEmptyString,
   parent_media_index: numberOrEmptyString,
   thumb: z.string(),
   originally_available_at: z.string(),
   guid: z.string(),
+
+  // Playback info
   transcode_decision: z.string(),
   percent_complete: z.number(),
-  watched_status: z.number(), // Can be 0, 0.75, 1 (decimal for partial watch)
+  watched_status: z.number(), // 0, 0.75, 1
+
+  // Session grouping
   group_count: z.number().nullable(),
   group_ids: z.string().nullable(),
   state: z.string().nullable(),
-  session_key: z.union([z.string(), z.number()]).nullable(),
+  session_key: z.number().nullable(), // Actually just number | null per API
 });
 
 export const TautulliHistoryResponseSchema = z.object({
