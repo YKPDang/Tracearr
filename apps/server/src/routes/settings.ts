@@ -66,6 +66,9 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
         pollerIntervalMs: row.pollerIntervalMs,
         tautulliUrl: row.tautulliUrl,
         tautulliApiKey: row.tautulliApiKey ? '********' : null, // Mask API key
+        externalUrl: row.externalUrl,
+        basePath: row.basePath,
+        trustProxy: row.trustProxy,
       };
 
       return result;
@@ -104,6 +107,9 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
         pollerIntervalMs: number;
         tautulliUrl: string | null;
         tautulliApiKey: string | null;
+        externalUrl: string | null;
+        basePath: string;
+        trustProxy: boolean;
         updatedAt: Date;
       }> = {
         updatedAt: new Date(),
@@ -152,6 +158,25 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       if (body.data.tautulliApiKey !== undefined) {
         // Store API key as-is (could encrypt if needed)
         updateData.tautulliApiKey = body.data.tautulliApiKey;
+      }
+
+      if (body.data.externalUrl !== undefined) {
+        // Strip trailing slash for consistency
+        updateData.externalUrl = body.data.externalUrl?.replace(/\/+$/, '') ?? null;
+      }
+
+      if (body.data.basePath !== undefined) {
+        // Normalize base path: ensure leading slash, no trailing slash
+        let path = body.data.basePath.trim();
+        if (path && !path.startsWith('/')) {
+          path = '/' + path;
+        }
+        path = path.replace(/\/+$/, '');
+        updateData.basePath = path;
+      }
+
+      if (body.data.trustProxy !== undefined) {
+        updateData.trustProxy = body.data.trustProxy;
       }
 
       // Ensure settings row exists
@@ -205,6 +230,9 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
         pollerIntervalMs: row.pollerIntervalMs,
         tautulliUrl: row.tautulliUrl,
         tautulliApiKey: row.tautulliApiKey ? '********' : null, // Mask API key
+        externalUrl: row.externalUrl,
+        basePath: row.basePath,
+        trustProxy: row.trustProxy,
       };
 
       return result;
@@ -234,5 +262,36 @@ export async function getPollerSettings(): Promise<{ enabled: boolean; intervalM
   return {
     enabled: settingsRow.pollerEnabled,
     intervalMs: settingsRow.pollerIntervalMs,
+  };
+}
+
+/**
+ * Get network settings from database (for internal use)
+ */
+export async function getNetworkSettings(): Promise<{
+  externalUrl: string | null;
+  basePath: string;
+  trustProxy: boolean;
+}> {
+  const row = await db
+    .select({
+      externalUrl: settings.externalUrl,
+      basePath: settings.basePath,
+      trustProxy: settings.trustProxy,
+    })
+    .from(settings)
+    .where(eq(settings.id, SETTINGS_ID))
+    .limit(1);
+
+  const settingsRow = row[0];
+  if (!settingsRow) {
+    // Return defaults if settings don't exist yet
+    return { externalUrl: null, basePath: '', trustProxy: false };
+  }
+
+  return {
+    externalUrl: settingsRow.externalUrl,
+    basePath: settingsRow.basePath,
+    trustProxy: settingsRow.trustProxy,
   };
 }

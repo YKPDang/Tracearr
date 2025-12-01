@@ -43,7 +43,7 @@ import { importRoutes } from './routes/import.js';
 import { imageRoutes } from './routes/images.js';
 import { debugRoutes } from './routes/debug.js';
 import { mobileRoutes } from './routes/mobile.js';
-import { getPollerSettings } from './routes/settings.js';
+import { getPollerSettings, getNetworkSettings } from './routes/settings.js';
 import { initializeEncryption, isEncryptionInitialized } from './utils/crypto.js';
 import { geoipService } from './services/geoip.js';
 import { createCacheService, createPubSubService } from './services/cache.js';
@@ -56,7 +56,7 @@ import { sql } from 'drizzle-orm';
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
 
-async function buildApp() {
+async function buildApp(options: { trustProxy?: boolean } = {}) {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
@@ -65,6 +65,9 @@ async function buildApp() {
           ? { target: 'pino-pretty', options: { colorize: true } }
           : undefined,
     },
+    // Trust proxy if enabled in settings or via env var
+    // This respects X-Forwarded-For, X-Forwarded-Proto headers from reverse proxies
+    trustProxy: options.trustProxy ?? process.env.TRUST_PROXY === 'true',
   });
 
   // Run database migrations
@@ -325,6 +328,22 @@ async function start() {
       startPoller({ enabled: true, intervalMs: pollerSettings.intervalMs });
     } else {
       app.log.info('Session poller disabled in settings');
+    }
+
+    // Log network settings status
+    const networkSettings = await getNetworkSettings();
+    const envTrustProxy = process.env.TRUST_PROXY === 'true';
+    if (networkSettings.trustProxy && !envTrustProxy) {
+      app.log.warn(
+        'Trust proxy is enabled in settings but TRUST_PROXY env var is not set. ' +
+          'Set TRUST_PROXY=true and restart for reverse proxy support.'
+      );
+    }
+    if (networkSettings.externalUrl) {
+      app.log.info(`External URL configured: ${networkSettings.externalUrl}`);
+    }
+    if (networkSettings.basePath) {
+      app.log.info(`Base path configured: ${networkSettings.basePath}`);
     }
   } catch (err) {
     console.error('Failed to start server:', err);
