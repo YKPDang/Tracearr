@@ -90,6 +90,8 @@ export function mapMediaSession(
     state: session.playback.state === 'paused' ? 'paused' : 'playing',
     totalDurationMs: session.media.durationMs,
     progressMs: session.playback.positionMs,
+    // Jellyfin provides exact pause timestamp for more accurate tracking
+    lastPausedDate: session.lastPausedDate,
   };
 }
 

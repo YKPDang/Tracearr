@@ -246,8 +246,8 @@ async function processServerSessions(
             startedAt: new Date(),
             totalDurationMs: processed.totalDurationMs || null,
             progressMs: processed.progressMs || null,
-            // Pause tracking - initialize based on starting state
-            lastPausedAt: processed.state === 'paused' ? new Date() : null,
+            // Pause tracking - use Jellyfin's precise timestamp if available, otherwise infer from state
+            lastPausedAt: processed.lastPausedDate ?? (processed.state === 'paused' ? new Date() : null),
             pausedDurationMs: 0,
             // Session grouping
             referenceId,

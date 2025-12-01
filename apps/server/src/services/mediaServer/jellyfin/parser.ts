@@ -96,15 +96,66 @@ function getBitrate(session: Record<string, unknown>): number {
 }
 
 /**
+ * Get play method from PlayState and normalize to lowercase
+ * PlayMethod enum: DirectPlay, DirectStream, Transcode
+ */
+function getPlayMethod(session: Record<string, unknown>): string {
+  const playState = getNestedObject(session, 'PlayState');
+  const playMethod = parseOptionalString(playState?.PlayMethod);
+
+  if (playMethod) {
+    // Normalize to lowercase: DirectPlay → directplay, DirectStream → directstream, Transcode → transcode
+    return playMethod.toLowerCase();
+  }
+
+  // Fall back to checking TranscodingInfo if PlayMethod not available
+  const transcodingInfo = getNestedObject(session, 'TranscodingInfo');
+  if (!transcodingInfo) return 'directplay';
+
+  const isVideoDirect = getNestedValue(transcodingInfo, 'IsVideoDirect');
+  return isVideoDirect === false ? 'transcode' : 'directplay';
+}
+
+/**
  * Determine if stream is being transcoded
+ * Uses PlayMethod from PlayState for accuracy, falls back to TranscodingInfo
  */
 function isTranscoding(session: Record<string, unknown>): boolean {
-  const transcodingInfo = getNestedObject(session, 'TranscodingInfo');
-  if (!transcodingInfo) return false;
+  const playMethod = getPlayMethod(session);
+  return playMethod === 'transcode';
+}
 
-  // If IsVideoDirect is false, it's transcoding
-  const isVideoDirect = getNestedValue(transcodingInfo, 'IsVideoDirect');
-  return isVideoDirect === false;
+/**
+ * Check if session is a trailer or preroll that should be filtered out
+ */
+function isTrailerOrPreroll(nowPlaying: Record<string, unknown>): boolean {
+  // Filter trailers
+  const itemType = parseOptionalString(nowPlaying.Type);
+  if (itemType?.toLowerCase() === 'trailer') return true;
+
+  // Filter preroll videos (check ProviderIds for prerolls.video)
+  const providerIds = getNestedObject(nowPlaying, 'ProviderIds');
+  if (providerIds && 'prerolls.video' in providerIds) return true;
+
+  return false;
+}
+
+/**
+ * Build Jellyfin image URL path for an item
+ * Jellyfin images use: /Items/{id}/Images/{type}
+ */
+function buildItemImagePath(itemId: string, imageTag: string | undefined): string | undefined {
+  if (!imageTag || !itemId) return undefined;
+  return `/Items/${itemId}/Images/Primary`;
+}
+
+/**
+ * Build Jellyfin image URL path for a user avatar
+ * Jellyfin user images use: /Users/{id}/Images/Primary
+ */
+function buildUserImagePath(userId: string, imageTag: string | undefined): string | undefined {
+  if (!imageTag || !userId) return undefined;
+  return `/Users/${userId}/Images/Primary`;
 }
 
 /**
@@ -114,34 +165,46 @@ export function parseSession(session: Record<string, unknown>): MediaSession | n
   const nowPlaying = getNestedObject(session, 'NowPlayingItem');
   if (!nowPlaying) return null; // No active playback
 
+  // Filter out trailers and prerolls
+  if (isTrailerOrPreroll(nowPlaying)) return null;
+
   const playState = getNestedObject(session, 'PlayState');
-  const transcodingInfo = getNestedObject(session, 'TranscodingInfo');
   const imageTags = getNestedObject(nowPlaying, 'ImageTags');
 
   const durationMs = ticksToMs(nowPlaying.RunTimeTicks);
   const positionMs = ticksToMs(playState?.PositionTicks);
   const mediaType = parseMediaType(nowPlaying.Type);
 
-  const isTranscode = isTranscoding(session);
-  const videoDecision = isTranscode ? 'transcode' : 'directplay';
-  if (transcodingInfo?.IsVideoDirect === false) {
-    // It's actually transcoding
-  }
+  // Use PlayMethod for accurate transcode detection
+  const videoDecision = getPlayMethod(session);
+  const isTranscode = videoDecision === 'transcode';
+
+  // Parse LastPausedDate for accurate pause tracking
+  const lastPausedDateStr = parseOptionalString(session.LastPausedDate);
+  const lastPausedDate = lastPausedDateStr ? new Date(lastPausedDateStr) : undefined;
+
+  // Build full image paths for Jellyfin (not just image tag IDs)
+  const itemId = parseString(nowPlaying.Id);
+  const userId = parseString(session.UserId);
+  const userImageTag = parseOptionalString(session.UserPrimaryImageTag);
+  const primaryImageTag = imageTags?.Primary ? parseString(imageTags.Primary) : undefined;
 
   const result: MediaSession = {
     sessionKey: parseString(session.Id),
-    mediaId: parseString(nowPlaying.Id),
+    mediaId: itemId,
     user: {
-      id: parseString(session.UserId),
+      id: userId,
       username: parseString(session.UserName),
-      thumb: parseOptionalString(session.UserPrimaryImageTag),
+      // Build full path: /Users/{userId}/Images/Primary
+      thumb: buildUserImagePath(userId, userImageTag),
     },
     media: {
       title: parseString(nowPlaying.Name),
       type: mediaType,
       durationMs,
       year: parseOptionalNumber(nowPlaying.ProductionYear),
-      thumbPath: imageTags?.Primary ? parseString(imageTags.Primary) : undefined,
+      // Build full path: /Items/{itemId}/Images/Primary
+      thumbPath: buildItemImagePath(itemId, primaryImageTag),
     },
     playback: {
       state: parsePlaybackState(playState?.IsPaused),
@@ -165,17 +228,23 @@ export function parseSession(session: Record<string, unknown>): MediaSession | n
       isTranscode,
       videoDecision,
     },
+    // Jellyfin provides exact pause timestamp for accurate tracking
+    lastPausedDate,
   };
 
   // Add episode-specific metadata if this is an episode
   if (mediaType === 'episode') {
+    const seriesId = parseOptionalString(nowPlaying.SeriesId);
+    const seriesImageTag = parseOptionalString(nowPlaying.SeriesPrimaryImageTag);
+
     result.episode = {
       showTitle: parseString(nowPlaying.SeriesName),
-      showId: parseOptionalString(nowPlaying.SeriesId),
+      showId: seriesId,
       seasonNumber: parseNumber(nowPlaying.ParentIndexNumber),
       episodeNumber: parseNumber(nowPlaying.IndexNumber),
       seasonName: parseOptionalString(nowPlaying.SeasonName),
-      showThumbPath: parseOptionalString(nowPlaying.SeriesPrimaryImageTag),
+      // Build full path for series poster: /Items/{seriesId}/Images/Primary
+      showThumbPath: seriesId ? buildItemImagePath(seriesId, seriesImageTag) : undefined,
     };
   }
 
@@ -206,12 +275,15 @@ export function parseSessionsResponse(sessions: unknown[]): MediaSession[] {
  */
 export function parseUser(user: Record<string, unknown>): MediaUser {
   const policy = getNestedObject(user, 'Policy');
+  const userId = parseString(user.Id);
+  const imageTag = parseOptionalString(user.PrimaryImageTag);
 
   return {
-    id: parseString(user.Id),
+    id: userId,
     username: parseString(user.Name),
     email: undefined, // Jellyfin doesn't expose email in user API
-    thumb: parseOptionalString(user.PrimaryImageTag),
+    // Build full path for user avatar: /Users/{userId}/Images/Primary
+    thumb: buildUserImagePath(userId, imageTag),
     isAdmin: parseBoolean(policy?.IsAdministrator),
     isDisabled: parseBoolean(policy?.IsDisabled),
     lastLoginAt: user.LastLoginDate ? new Date(parseString(user.LastLoginDate)) : undefined,

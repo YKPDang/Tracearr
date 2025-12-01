@@ -105,6 +105,12 @@ export interface ProcessedSession {
   totalDurationMs: number;
   /** Current playback position in milliseconds */
   progressMs: number;
+
+  /**
+   * Jellyfin-specific: When the current pause started (from API).
+   * More accurate than tracking pause transitions via polling.
+   */
+  lastPausedDate?: Date;
 }
 
 // ============================================================================

@@ -228,7 +228,8 @@ describe('Jellyfin User Parser', () => {
 
       expect(user.id).toBe('admin-123');
       expect(user.username).toBe('Administrator');
-      expect(user.thumb).toBe('avatar-tag');
+      // thumb is now a full path, not just the image tag
+      expect(user.thumb).toBe('/Users/admin-123/Images/Primary');
       expect(user.isAdmin).toBe(true);
       expect(user.isDisabled).toBe(false);
       expect(user.lastLoginAt).toEqual(new Date('2024-01-15T10:30:00.000Z'));
@@ -548,6 +549,212 @@ describe('Jellyfin Auth Response Parser', () => {
 
       expect(result.isAdmin).toBe(false);
     });
+  });
+});
+
+// ============================================================================
+// New Features: PlayMethod, LastPausedDate, Trailer Filtering
+// ============================================================================
+
+describe('Jellyfin Parser - PlayMethod and Transcode Detection', () => {
+  it('should use PlayMethod from PlayState for transcode detection', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        PlayMethod: 'Transcode',
+        IsPaused: false,
+      },
+    });
+
+    expect(session!.quality.isTranscode).toBe(true);
+    expect(session!.quality.videoDecision).toBe('transcode');
+  });
+
+  it('should detect DirectPlay from PlayMethod', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        PlayMethod: 'DirectPlay',
+        IsPaused: false,
+      },
+    });
+
+    expect(session!.quality.isTranscode).toBe(false);
+    expect(session!.quality.videoDecision).toBe('directplay');
+  });
+
+  it('should detect DirectStream from PlayMethod', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        PlayMethod: 'DirectStream',
+        IsPaused: false,
+      },
+    });
+
+    expect(session!.quality.isTranscode).toBe(false);
+    expect(session!.quality.videoDecision).toBe('directstream');
+  });
+
+  it('should normalize PlayMethod to lowercase', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        PlayMethod: 'DirectPlay', // PascalCase from API
+        IsPaused: false,
+      },
+    });
+
+    // Should be normalized to lowercase for consistency with Plex
+    expect(session!.quality.videoDecision).toBe('directplay');
+  });
+
+  it('should fall back to TranscodingInfo when PlayMethod not available', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        // No PlayMethod
+        IsPaused: false,
+      },
+      TranscodingInfo: {
+        IsVideoDirect: false,
+      },
+    });
+
+    expect(session!.quality.isTranscode).toBe(true);
+    expect(session!.quality.videoDecision).toBe('transcode');
+  });
+});
+
+describe('Jellyfin Parser - LastPausedDate', () => {
+  it('should parse LastPausedDate when session is paused', () => {
+    const pauseTime = '2024-01-15T10:30:00.000Z';
+    const session = parseSession({
+      Id: 'session-1',
+      LastPausedDate: pauseTime,
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        IsPaused: true,
+      },
+    });
+
+    expect(session!.lastPausedDate).toEqual(new Date(pauseTime));
+    expect(session!.playback.state).toBe('paused');
+  });
+
+  it('should not have lastPausedDate when playing', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      // No LastPausedDate when playing
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: {
+        IsPaused: false,
+      },
+    });
+
+    expect(session!.lastPausedDate).toBeUndefined();
+    expect(session!.playback.state).toBe('playing');
+  });
+
+  it('should handle null LastPausedDate', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      LastPausedDate: null,
+      NowPlayingItem: { Id: '1', Name: 'Test', Type: 'Movie' },
+      PlayState: { IsPaused: false },
+    });
+
+    expect(session!.lastPausedDate).toBeUndefined();
+  });
+});
+
+describe('Jellyfin Parser - Trailer and Preroll Filtering', () => {
+  it('should filter out Trailer sessions', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: {
+        Id: 'trailer-1',
+        Name: 'Movie Trailer',
+        Type: 'Trailer',
+      },
+    });
+
+    expect(session).toBeNull();
+  });
+
+  it('should filter out preroll videos', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: {
+        Id: 'preroll-1',
+        Name: 'Preroll Video',
+        Type: 'Video',
+        ProviderIds: {
+          'prerolls.video': 'some-id',
+        },
+      },
+    });
+
+    expect(session).toBeNull();
+  });
+
+  it('should NOT filter regular movies', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: {
+        Id: 'movie-1',
+        Name: 'Regular Movie',
+        Type: 'Movie',
+        ProviderIds: {
+          Imdb: 'tt1234567',
+        },
+      },
+    });
+
+    expect(session).not.toBeNull();
+    expect(session!.media.title).toBe('Regular Movie');
+  });
+
+  it('should NOT filter episodes', () => {
+    const session = parseSession({
+      Id: 'session-1',
+      NowPlayingItem: {
+        Id: 'ep-1',
+        Name: 'Episode 1',
+        Type: 'Episode',
+        SeriesName: 'Test Show',
+      },
+    });
+
+    expect(session).not.toBeNull();
+  });
+
+  it('should filter trailer sessions from parseSessionsResponse', () => {
+    const sessions = [
+      {
+        Id: '1',
+        NowPlayingItem: { Id: 'movie-1', Name: 'Movie', Type: 'Movie' },
+      },
+      {
+        Id: '2',
+        NowPlayingItem: { Id: 'trailer-1', Name: 'Trailer', Type: 'Trailer' },
+      },
+      {
+        Id: '3',
+        NowPlayingItem: { Id: 'ep-1', Name: 'Episode', Type: 'Episode' },
+      },
+    ];
+
+    const parsed = parseSessionsResponse(sessions);
+
+    // Should only have movie and episode, trailer filtered out
+    expect(parsed).toHaveLength(2);
+    expect(parsed.map(s => s.sessionKey)).toEqual(['1', '3']);
   });
 });
 

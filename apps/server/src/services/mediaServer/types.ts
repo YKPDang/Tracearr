@@ -90,9 +90,16 @@ export interface MediaSession {
     bitrate: number;
     /** Whether stream is being transcoded */
     isTranscode: boolean;
-    /** Video decision (directplay, copy, transcode) */
+    /** Video decision (directplay, copy, transcode) - normalized to lowercase */
     videoDecision: string;
   };
+
+  /**
+   * Jellyfin-specific: When the current pause started (from API).
+   * More accurate than tracking pause transitions via polling.
+   * Plex doesn't provide this field.
+   */
+  lastPausedDate?: Date;
 }
 
 // ============================================================================
