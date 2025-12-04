@@ -47,7 +47,7 @@ export class NotificationService {
     }
 
     const payload: NotificationPayload = {
-      event: NOTIFICATION_EVENTS.SESSION_STARTED,
+      event: NOTIFICATION_EVENTS.STREAM_STARTED,
       timestamp: new Date().toISOString(),
       data: {
         user: { id: session.serverUserId, username: session.user.username },
@@ -70,7 +70,7 @@ export class NotificationService {
     }
 
     const payload: NotificationPayload = {
-      event: NOTIFICATION_EVENTS.SESSION_STOPPED,
+      event: NOTIFICATION_EVENTS.STREAM_STOPPED,
       timestamp: new Date().toISOString(),
       data: {
         user: { id: session.serverUserId, username: session.user.username },
@@ -111,9 +111,37 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Send server up notification
+   */
+  async notifyServerUp(serverName: string, settings: Settings): Promise<void> {
+    if (!settings.notifyOnServerDown) {
+      // Use same setting as server down for now
+      return;
+    }
+
+    const payload: NotificationPayload = {
+      event: NOTIFICATION_EVENTS.SERVER_UP,
+      timestamp: new Date().toISOString(),
+      data: { serverName },
+    };
+
+    if (settings.discordWebhookUrl) {
+      await this.sendDiscordMessage(settings.discordWebhookUrl, {
+        title: 'Server Back Online',
+        description: `${serverName} is back online`,
+        color: 0x2ecc71, // Green
+      });
+    }
+
+    if (settings.customWebhookUrl) {
+      await this.sendWebhook(settings.customWebhookUrl, payload);
+    }
+  }
+
   private buildViolationPayload(violation: ViolationWithDetails): NotificationPayload {
     return {
-      event: NOTIFICATION_EVENTS.VIOLATION_NEW,
+      event: NOTIFICATION_EVENTS.VIOLATION_DETECTED,
       timestamp: violation.createdAt.toISOString(),
       data: {
         user: { id: violation.serverUserId, username: violation.user.username },

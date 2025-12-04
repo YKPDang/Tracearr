@@ -43,12 +43,20 @@ import { importRoutes } from './routes/import.js';
 import { imageRoutes } from './routes/images.js';
 import { debugRoutes } from './routes/debug.js';
 import { mobileRoutes } from './routes/mobile.js';
+import { notificationPreferencesRoutes } from './routes/notificationPreferences.js';
+import { channelRoutingRoutes } from './routes/channelRouting.js';
 import { getPollerSettings, getNetworkSettings } from './routes/settings.js';
 import { initializeEncryption, isEncryptionInitialized } from './utils/crypto.js';
 import { geoipService } from './services/geoip.js';
 import { createCacheService, createPubSubService } from './services/cache.js';
 import { initializePoller, startPoller, stopPoller } from './jobs/poller/index.js';
 import { initializeWebSocket, broadcastToSessions } from './websocket/index.js';
+import {
+  initNotificationQueue,
+  startNotificationWorker,
+  shutdownNotificationQueue,
+} from './jobs/notificationQueue.js';
+import { initPushRateLimiter } from './services/pushRateLimiter.js';
 import { db, runMigrations } from './db/client.js';
 import { initTimescaleDB, getTimescaleStatus } from './db/timescale.js';
 import { sql } from 'drizzle-orm';
@@ -152,13 +160,28 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
   const cacheService = createCacheService(app.redis);
   const pubSubService = createPubSubService(app.redis, pubSubRedis);
 
+  // Initialize push notification rate limiter (uses Redis for sliding window counters)
+  initPushRateLimiter(app.redis);
+  app.log.info('Push notification rate limiter initialized');
+
+  // Initialize notification queue (uses Redis for job storage)
+  try {
+    initNotificationQueue(redisUrl);
+    startNotificationWorker();
+    app.log.info('Notification queue initialized');
+  } catch (err) {
+    app.log.error({ err }, 'Failed to initialize notification queue');
+    // Don't throw - notifications are non-critical
+  }
+
   // Initialize poller with cache services
   initializePoller(cacheService, pubSubService);
 
-  // Cleanup pub/sub redis on close
+  // Cleanup pub/sub redis and notification queue on close
   app.addHook('onClose', async () => {
     await pubSubRedis.quit();
     stopPoller();
+    await shutdownNotificationQueue();
   });
 
   // Health check endpoint
@@ -217,10 +240,12 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
   await app.register(violationRoutes, { prefix: `${API_BASE_PATH}/violations` });
   await app.register(statsRoutes, { prefix: `${API_BASE_PATH}/stats` });
   await app.register(settingsRoutes, { prefix: `${API_BASE_PATH}/settings` });
+  await app.register(channelRoutingRoutes, { prefix: `${API_BASE_PATH}/settings/notifications` });
   await app.register(importRoutes, { prefix: `${API_BASE_PATH}/import` });
   await app.register(imageRoutes, { prefix: `${API_BASE_PATH}/images` });
   await app.register(debugRoutes, { prefix: `${API_BASE_PATH}/debug` });
   await app.register(mobileRoutes, { prefix: `${API_BASE_PATH}/mobile` });
+  await app.register(notificationPreferencesRoutes, { prefix: `${API_BASE_PATH}/notifications` });
 
   // Serve static frontend in production
   const webDistPath = resolve(PROJECT_ROOT, 'apps/web/dist');
@@ -254,6 +279,7 @@ async function start() {
       process.on(signal, () => {
         app.log.info(`Received ${signal}, shutting down gracefully...`);
         stopPoller();
+        void shutdownNotificationQueue();
         void app.close().then(() => process.exit(0));
       });
     }
