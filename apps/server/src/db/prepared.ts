@@ -10,9 +10,9 @@
  * @see https://orm.drizzle.team/docs/perf-queries
  */
 
-import { eq, gte, and, isNull, sql } from 'drizzle-orm';
+import { eq, gte, and, isNull, desc, sql } from 'drizzle-orm';
 import { db } from './client.js';
-import { sessions, violations, users, serverUsers } from './schema.js';
+import { sessions, violations, users, serverUsers, servers, rules } from './schema.js';
 
 // ============================================================================
 // Dashboard Stats Queries
@@ -216,6 +216,83 @@ export const watchTimeByTypeSince = db
   .prepare('watch_time_by_type_since');
 
 // ============================================================================
+// Rule Queries (hot-path for poller)
+// ============================================================================
+
+/**
+ * Get all active rules
+ * Used for: Rule evaluation during session polling
+ * Called: Every poll cycle (~15 seconds per server)
+ */
+export const getActiveRules = db
+  .select()
+  .from(rules)
+  .where(eq(rules.isActive, true))
+  .prepare('get_active_rules');
+
+/**
+ * Get recent sessions for a user (for rule evaluation)
+ * Used for: Evaluating device velocity, concurrent streams rules
+ * Called: During rule evaluation for active sessions
+ */
+export const getUserRecentSessions = db
+  .select({
+    id: sessions.id,
+    startedAt: sessions.startedAt,
+    stoppedAt: sessions.stoppedAt,
+    ipAddress: sessions.ipAddress,
+    deviceId: sessions.deviceId,
+    geoLat: sessions.geoLat,
+    geoLon: sessions.geoLon,
+    geoCity: sessions.geoCity,
+    geoCountry: sessions.geoCountry,
+    state: sessions.state,
+  })
+  .from(sessions)
+  .where(
+    and(
+      eq(sessions.serverUserId, sql.placeholder('serverUserId')),
+      gte(sessions.startedAt, sql.placeholder('since'))
+    )
+  )
+  .orderBy(desc(sessions.startedAt))
+  .limit(100)
+  .prepare('get_user_recent_sessions');
+
+// ============================================================================
+// Violation Queries
+// ============================================================================
+
+/**
+ * Get unacknowledged violations with pagination
+ * Used for: Violation list in dashboard
+ * Called: Frequently for alert displays
+ */
+export const getUnackedViolations = db
+  .select()
+  .from(violations)
+  .where(isNull(violations.acknowledgedAt))
+  .orderBy(desc(violations.createdAt))
+  .limit(sql.placeholder('limit'))
+  .prepare('get_unacked_violations');
+
+// ============================================================================
+// Server Queries
+// ============================================================================
+
+/**
+ * Get server by ID
+ * Used for: Server details, validation
+ * Called: Frequently during API requests
+ */
+export const serverById = db
+  .select()
+  .from(servers)
+  .where(eq(servers.id, sql.placeholder('id')))
+  .limit(1)
+  .prepare('server_by_id');
+
+// ============================================================================
 // Type exports for execute results
 // ============================================================================
 
@@ -229,3 +306,7 @@ export type SessionByIdResult = Awaited<ReturnType<typeof sessionById.execute>>;
 export type PlaysByPlatformResult = Awaited<ReturnType<typeof playsByPlatformSince.execute>>;
 export type QualityStatsResult = Awaited<ReturnType<typeof qualityStatsSince.execute>>;
 export type WatchTimeByTypeResult = Awaited<ReturnType<typeof watchTimeByTypeSince.execute>>;
+export type ActiveRulesResult = Awaited<ReturnType<typeof getActiveRules.execute>>;
+export type UserRecentSessionsResult = Awaited<ReturnType<typeof getUserRecentSessions.execute>>;
+export type UnackedViolationsResult = Awaited<ReturnType<typeof getUnackedViolations.execute>>;
+export type ServerByIdResult = Awaited<ReturnType<typeof serverById.execute>>;
