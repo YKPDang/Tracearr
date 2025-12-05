@@ -73,6 +73,12 @@ export const REDIS_KEYS = {
   // Notification rate limiting (sliding window counters)
   PUSH_RATE_MINUTE: (sessionId: string) => `tracearr:push:rate:minute:${sessionId}`,
   PUSH_RATE_HOUR: (sessionId: string) => `tracearr:push:rate:hour:${sessionId}`,
+  // Location stats filter caching (includes serverIds hash for proper scoping)
+  LOCATION_FILTERS: (userId: string, serverIds: string[]) => {
+    // Sort and hash serverIds for stable cache key
+    const serverHash = serverIds.length > 0 ? serverIds.slice().sort().join(',') : 'all';
+    return `tracearr:filters:locations:${userId}:${serverHash}`;
+  },
 } as const;
 
 // Cache TTLs in seconds
@@ -82,6 +88,7 @@ export const CACHE_TTL = {
   USER_SESSIONS: 3600,
   RATE_LIMIT: 900,
   SERVER_HEALTH: 600, // 10 minutes - servers marked unhealthy if no update
+  LOCATION_FILTERS: 300, // 5 minutes - filter options change infrequently
 } as const;
 
 // Notification event types (must match NotificationEventType in types.ts)

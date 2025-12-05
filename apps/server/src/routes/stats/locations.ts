@@ -2,12 +2,21 @@
  * Location Statistics Routes
  *
  * GET /locations - Geo data for stream map with filtering
+ *
+ * Features cascading filters where each filter's available options depend on
+ * the other active filters. Runs 2 parallel queries per request.
  */
 
 import type { FastifyPluginAsync } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { TIME_MS, locationStatsQuerySchema } from '@tracearr/shared';
 import { db } from '../../db/client.js';
+
+interface LocationFilters {
+  users: { id: string; username: string }[];
+  servers: { id: string; name: string }[];
+  mediaTypes: ('movie' | 'episode' | 'track')[];
+}
 
 export const locationsRoutes: FastifyPluginAsync = async (app) => {
   /**
@@ -30,13 +39,21 @@ export const locationsRoutes: FastifyPluginAsync = async (app) => {
 
       const { days, serverUserId, serverId, mediaType } = query.data;
       const startDate = new Date(Date.now() - days * TIME_MS.DAY);
+      const authUser = request.user;
 
-      // Build WHERE conditions dynamically (all qualified with 's.' for sessions table)
+      // Build WHERE conditions for main query (all qualified with 's.' for sessions table)
       const conditions: ReturnType<typeof sql>[] = [
         sql`s.started_at >= ${startDate}`,
         sql`s.geo_lat IS NOT NULL`,
         sql`s.geo_lon IS NOT NULL`,
       ];
+
+      // Apply server access restriction if user has limited access
+      // Note: We build the array literal explicitly because Drizzle doesn't auto-convert JS arrays for ANY()
+      if (authUser.serverIds.length > 0) {
+        const serverIdArray = sql.raw(`ARRAY[${authUser.serverIds.map(id => `'${id}'::uuid`).join(',')}]`);
+        conditions.push(sql`s.server_id = ANY(${serverIdArray})`);
+      }
 
       if (serverUserId) {
         conditions.push(sql`s.server_user_id = ${serverUserId}`);
@@ -50,30 +67,112 @@ export const locationsRoutes: FastifyPluginAsync = async (app) => {
 
       const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
-      // Count unique plays per location with filters
-      // Include contextual data based on what's being filtered
-      const result = await db.execute(sql`
-        SELECT
-          s.geo_city as city,
-          s.geo_region as region,
-          s.geo_country as country,
-          s.geo_lat as lat,
-          s.geo_lon as lon,
-          COUNT(DISTINCT COALESCE(s.reference_id, s.id))::int as count,
-          MAX(s.started_at) as last_activity,
-          MIN(s.started_at) as first_activity,
-          COUNT(DISTINCT COALESCE(s.device_id, s.player_name))::int as device_count,
-          JSON_AGG(DISTINCT jsonb_build_object('id', su.id, 'username', su.username, 'thumbUrl', su.thumb_url))
-            FILTER (WHERE su.id IS NOT NULL) as user_info
-        FROM sessions s
-        LEFT JOIN server_users su ON s.server_user_id = su.id
-        ${whereClause}
-        GROUP BY s.geo_city, s.geo_region, s.geo_country, s.geo_lat, s.geo_lon
-        ORDER BY count DESC
-        LIMIT 200
-      `);
+      // Build cascading filter conditions - each filter type sees options based on OTHER active filters
+      // This gives users a consistent UX where selecting one filter narrows down the others
+      const baseConditions: ReturnType<typeof sql>[] = [
+        sql`s.started_at >= ${startDate}`,
+        sql`s.geo_lat IS NOT NULL`,
+        sql`s.geo_lon IS NOT NULL`,
+      ];
+      if (authUser.serverIds.length > 0) {
+        const baseServerIdArray = sql.raw(`ARRAY[${authUser.serverIds.map(id => `'${id}'::uuid`).join(',')}]`);
+        baseConditions.push(sql`s.server_id = ANY(${baseServerIdArray})`);
+      }
 
-      const locationStats = (result.rows as {
+      // Users filter: apply server + mediaType filters (not user filter)
+      const userFilterConditions = [...baseConditions];
+      if (serverId) userFilterConditions.push(sql`s.server_id = ${serverId}`);
+      if (mediaType) userFilterConditions.push(sql`s.media_type = ${mediaType}`);
+      const userFilterWhereClause = sql`WHERE ${sql.join(userFilterConditions, sql` AND `)}`;
+
+      // Servers filter: apply user + mediaType filters (not server filter)
+      const serverFilterConditions = [...baseConditions];
+      if (serverUserId) serverFilterConditions.push(sql`s.server_user_id = ${serverUserId}`);
+      if (mediaType) serverFilterConditions.push(sql`s.media_type = ${mediaType}`);
+      const serverFilterWhereClause = sql`WHERE ${sql.join(serverFilterConditions, sql` AND `)}`;
+
+      // MediaType filter: apply user + server filters (not mediaType filter)
+      const mediaFilterConditions = [...baseConditions];
+      if (serverUserId) mediaFilterConditions.push(sql`s.server_user_id = ${serverUserId}`);
+      if (serverId) mediaFilterConditions.push(sql`s.server_id = ${serverId}`);
+      const mediaFilterWhereClause = sql`WHERE ${sql.join(mediaFilterConditions, sql` AND `)}`;
+
+      // Cascading filters are always fetched fresh (no caching since they depend on current selections)
+      let availableFilters: LocationFilters | null = null;
+
+      // Execute queries in parallel (2 instead of 4 sequential)
+      const [mainResult, filtersResult] = await Promise.all([
+        // Query 1: Main location data with all filters applied
+        db.execute(sql`
+          SELECT
+            s.geo_city as city,
+            s.geo_region as region,
+            s.geo_country as country,
+            s.geo_lat as lat,
+            s.geo_lon as lon,
+            COUNT(DISTINCT COALESCE(s.reference_id, s.id))::int as count,
+            MAX(s.started_at) as last_activity,
+            MIN(s.started_at) as first_activity,
+            COUNT(DISTINCT COALESCE(s.device_id, s.player_name))::int as device_count,
+            JSON_AGG(DISTINCT jsonb_build_object('id', su.id, 'username', su.username, 'thumbUrl', su.thumb_url))
+              FILTER (WHERE su.id IS NOT NULL) as user_info
+          FROM sessions s
+          LEFT JOIN server_users su ON s.server_user_id = su.id
+          ${whereClause}
+          GROUP BY s.geo_city, s.geo_region, s.geo_country, s.geo_lat, s.geo_lon
+          ORDER BY count DESC
+          LIMIT 200
+        `),
+
+        // Query 2: Cascading filter options - each filter type uses conditions from OTHER active filters
+        // Note: ORDER BY not allowed within UNION subqueries, sorting done in application code
+        db.execute(sql`
+          SELECT 'user' as filter_type, su.id::text as id, su.username as name
+          FROM sessions s
+          JOIN server_users su ON su.id = s.server_user_id
+          ${userFilterWhereClause}
+          GROUP BY su.id, su.username
+
+          UNION ALL
+
+          SELECT 'server' as filter_type, sv.id::text as id, sv.name as name
+          FROM sessions s
+          JOIN servers sv ON sv.id = s.server_id
+          ${serverFilterWhereClause}
+          GROUP BY sv.id, sv.name
+
+          UNION ALL
+
+          SELECT 'media' as filter_type, s.media_type as id, s.media_type as name
+          FROM sessions s
+          ${mediaFilterWhereClause} AND s.media_type IS NOT NULL
+          GROUP BY s.media_type
+        `),
+      ]);
+
+      // Parse filter results (no caching - cascading filters depend on current selections)
+      // Sorting done here since ORDER BY not allowed within UNION subqueries
+      const filters = filtersResult.rows as { filter_type: string; id: string; name: string }[];
+      availableFilters = {
+        users: filters
+          .filter(f => f.filter_type === 'user')
+          .map(f => ({ id: f.id, username: f.name }))
+          .sort((a, b) => a.username.localeCompare(b.username)),
+        servers: filters
+          .filter(f => f.filter_type === 'server')
+          .map(f => ({ id: f.id, name: f.name }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+        mediaTypes: filters
+          .filter(f => f.filter_type === 'media')
+          .map(f => f.name)
+          .filter((t): t is 'movie' | 'episode' | 'track' =>
+            t === 'movie' || t === 'episode' || t === 'track'
+          )
+          .sort((a, b) => a.localeCompare(b)),
+      };
+
+      // Transform main query results
+      const locationStats = (mainResult.rows as {
         city: string | null;
         region: string | null;
         country: string | null;
@@ -103,58 +202,6 @@ export const locationsRoutes: FastifyPluginAsync = async (app) => {
       const uniqueLocations = locationStats.length;
       const topCity = locationStats[0]?.city ?? null;
 
-      // Build available filter options based on OTHER active filters
-      // For each dimension, we query what values exist given the other filters
-
-      // Base conditions (time + geo) that apply to all filter queries
-      const baseConditions = [
-        sql`s.started_at >= ${startDate}`,
-        sql`s.geo_lat IS NOT NULL`,
-        sql`s.geo_lon IS NOT NULL`,
-      ];
-
-      // Available users (apply server + mediaType filters, not user filter)
-      const userConditions = [...baseConditions];
-      if (serverId) userConditions.push(sql`s.server_id = ${serverId}`);
-      if (mediaType) userConditions.push(sql`s.media_type = ${mediaType}`);
-      const usersResult = await db.execute(sql`
-        SELECT DISTINCT su.id, su.username
-        FROM sessions s
-        JOIN server_users su ON s.server_user_id = su.id
-        WHERE ${sql.join(userConditions, sql` AND `)}
-        ORDER BY su.username
-      `);
-      const availableUsers = (usersResult.rows as { id: string; username: string }[]);
-
-      // Available servers (apply user + mediaType filters, not server filter)
-      const serverConditions = [...baseConditions];
-      if (serverUserId) serverConditions.push(sql`s.server_user_id = ${serverUserId}`);
-      if (mediaType) serverConditions.push(sql`s.media_type = ${mediaType}`);
-      const serversResult = await db.execute(sql`
-        SELECT DISTINCT sv.id, sv.name
-        FROM sessions s
-        JOIN servers sv ON s.server_id = sv.id
-        WHERE ${sql.join(serverConditions, sql` AND `)}
-        ORDER BY sv.name
-      `);
-      const availableServers = (serversResult.rows as { id: string; name: string }[]);
-
-      // Available media types (apply user + server filters, not mediaType filter)
-      const mediaConditions = [...baseConditions];
-      if (serverUserId) mediaConditions.push(sql`s.server_user_id = ${serverUserId}`);
-      if (serverId) mediaConditions.push(sql`s.server_id = ${serverId}`);
-      const mediaResult = await db.execute(sql`
-        SELECT DISTINCT s.media_type
-        FROM sessions s
-        WHERE ${sql.join(mediaConditions, sql` AND `)}
-        ORDER BY s.media_type
-      `);
-      const availableMediaTypes = (mediaResult.rows as { media_type: string }[])
-        .map(r => r.media_type)
-        .filter((t): t is 'movie' | 'episode' | 'track' =>
-          t === 'movie' || t === 'episode' || t === 'track'
-        );
-
       return {
         data: locationStats,
         summary: {
@@ -162,11 +209,7 @@ export const locationsRoutes: FastifyPluginAsync = async (app) => {
           uniqueLocations,
           topCity,
         },
-        availableFilters: {
-          users: availableUsers,
-          servers: availableServers,
-          mediaTypes: availableMediaTypes,
-        },
+        availableFilters: availableFilters ?? { users: [], servers: [], mediaTypes: [] },
       };
     }
   );
