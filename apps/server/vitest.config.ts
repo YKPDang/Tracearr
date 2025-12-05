@@ -34,6 +34,12 @@ export default mergeConfig(
           'src/utils/**/*.ts',
         ],
         exclude: ['**/*.test.ts', '**/test/**'],
+        thresholds: {
+          statements: 40,
+          branches: 40,
+          functions: 50,
+          lines: 40,
+        },
       },
     },
   })
