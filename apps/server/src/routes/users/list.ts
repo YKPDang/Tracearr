@@ -23,7 +23,7 @@ import { hasServerAccess } from '../../utils/serverFiltering.js';
 
 export const listRoutes: FastifyPluginAsync = async (app) => {
   // Combined schema for pagination and server filter
-  const userListQuerySchema = paginationSchema.merge(serverIdFilterSchema);
+  const userListQuerySchema = paginationSchema.extend(serverIdFilterSchema.shape);
 
   /**
    * GET / - List all server users with pagination
