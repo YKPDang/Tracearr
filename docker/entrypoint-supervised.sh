@@ -74,6 +74,15 @@ fi
 if [ ! -f /data/postgres/PG_VERSION ]; then
     log "Initializing PostgreSQL database..."
 
+    # Ensure data directory exists (may not if bind mount path is new)
+    mkdir -p /data/postgres
+
+    # Handle corrupt/partial initialization (has files but no PG_VERSION)
+    if [ "$(ls -A /data/postgres 2>/dev/null)" ]; then
+        warn "Data directory exists but is not initialized - clearing for fresh init"
+        rm -rf /data/postgres/*
+    fi
+
     # Ensure postgres owns the data directory
     chown -R postgres:postgres /data/postgres
 
@@ -113,8 +122,9 @@ else
     log "PostgreSQL data directory exists, skipping initialization"
 fi
 
-# Ensure correct ownership of data directories
-# This handles both fresh installs and upgrades from older versions
+# Ensure data directories exist and have correct ownership
+# This handles fresh installs, upgrades, and bind mounts to new paths
+mkdir -p /data/postgres /data/redis /data/tracearr
 chown -R postgres:postgres /data/postgres
 chown -R redis:redis /data/redis
 chown -R tracearr:tracearr /data/tracearr
