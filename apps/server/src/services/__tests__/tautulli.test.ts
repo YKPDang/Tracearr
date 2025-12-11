@@ -1390,3 +1390,191 @@ describe('Import Result Generation', () => {
     expect(result.message).toBe('Imported 500 sessions, skipped 50, 10 errors');
   });
 });
+
+// ============================================================================
+// CHANGE DETECTION TESTS
+// ============================================================================
+
+describe('Change Detection Logic', () => {
+  interface ExistingSession {
+    id: string;
+    stoppedAt: Date | null;
+    durationMs: number | null;
+    pausedDurationMs: number;
+    watched: boolean;
+  }
+
+  interface TautulliRecord {
+    stopped: number;
+    duration: number;
+    paused_counter: number;
+    watched_status: number;
+  }
+
+  function hasChanges(existing: ExistingSession, record: TautulliRecord): boolean {
+    const newStoppedAt = new Date(record.stopped * 1000);
+    const newDurationMs = record.duration * 1000;
+    const newPausedDurationMs = record.paused_counter * 1000;
+    const newWatched = record.watched_status === 1;
+
+    const stoppedAtChanged = existing.stoppedAt?.getTime() !== newStoppedAt.getTime();
+    const durationChanged = existing.durationMs !== newDurationMs;
+    const pausedChanged = existing.pausedDurationMs !== newPausedDurationMs;
+    const watchedChanged = existing.watched !== newWatched;
+
+    return stoppedAtChanged || durationChanged || pausedChanged || watchedChanged;
+  }
+
+  it('should detect no changes when values match', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 1,
+    };
+
+    expect(hasChanges(existing, record)).toBe(false);
+  });
+
+  it('should detect stoppedAt change', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494420, // 2 seconds later
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 1,
+    };
+
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should detect duration change', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6300, // Different duration
+      paused_counter: 0,
+      watched_status: 1,
+    };
+
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should detect paused duration change', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 100, // Was paused
+      watched_status: 1,
+    };
+
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should detect watched status change', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: false, // Not watched
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 1, // Now watched
+    };
+
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should handle null stoppedAt in existing session', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: null, // Session was never stopped (active)
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 1,
+    };
+
+    // null.getTime() would throw, so this checks the comparison handles it
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should handle null durationMs in existing session', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: null, // Duration not yet recorded
+      pausedDurationMs: 0,
+      watched: true,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 1,
+    };
+
+    expect(hasChanges(existing, record)).toBe(true);
+  });
+
+  it('should treat watched_status < 1 as not watched', () => {
+    const existing: ExistingSession = {
+      id: 'uuid-1',
+      stoppedAt: new Date(1764494418 * 1000),
+      durationMs: 6292000,
+      pausedDurationMs: 0,
+      watched: false,
+    };
+
+    const record: TautulliRecord = {
+      stopped: 1764494418,
+      duration: 6292,
+      paused_counter: 0,
+      watched_status: 0.75, // Partial watch - still not "watched"
+    };
+
+    expect(hasChanges(existing, record)).toBe(false);
+  });
+});
