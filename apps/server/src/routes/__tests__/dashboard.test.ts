@@ -351,5 +351,40 @@ describe('Dashboard Stats Routes', () => {
       const body = JSON.parse(response.body);
       expect(body.watchTimeHours).toBe(5.6);
     });
+
+    it('should reject access to server not in user access list', async () => {
+      const serverId1 = randomUUID();
+      const serverId2 = randomUUID();
+      // Non-owner user only has access to serverId1
+      const viewerUser: AuthUser = {
+        userId: randomUUID(),
+        username: 'viewer',
+        role: 'viewer',
+        serverIds: [serverId1],
+      };
+
+      app = await buildTestApp(viewerUser);
+
+      // Try to access stats for serverId2 (not in user's serverIds)
+      const response = await app.inject({
+        method: 'GET',
+        url: `/stats/dashboard?serverId=${serverId2}`,
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should reject invalid serverId format', async () => {
+      const ownerUser = createOwnerUser();
+
+      app = await buildTestApp(ownerUser);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/stats/dashboard?serverId=not-a-uuid',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 });

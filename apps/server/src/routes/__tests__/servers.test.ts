@@ -720,4 +720,48 @@ describe('Server Routes', () => {
       expect(response.statusCode).toBe(400);
     });
   });
+
+  describe('GET /servers/:id/statistics', () => {
+    it('returns 404 for non-existent server', async () => {
+      app = await buildTestApp(ownerUser);
+
+      mockDbSelectLimit([]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/servers/${randomUUID()}/statistics`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 400 for non-Plex server', async () => {
+      const jellyfinServer = {
+        ...mockServer,
+        type: 'jellyfin' as const,
+      };
+
+      app = await buildTestApp(ownerUser);
+      mockDbSelectLimit([jellyfinServer]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/servers/${jellyfinServer.id}/statistics`,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toContain('only available for Plex');
+    });
+
+    it('returns 400 for invalid server ID', async () => {
+      app = await buildTestApp(ownerUser);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/servers/not-a-uuid/statistics',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
 });

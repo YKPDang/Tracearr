@@ -85,6 +85,8 @@ const mockSettingsRow = {
   allowGuestAccess: false,
   discordWebhookUrl: 'https://discord.com/api/webhooks/123',
   customWebhookUrl: 'https://example.com/webhook',
+  webhookFormat: 'json' as const,
+  ntfyTopic: null,
   notifyOnViolation: true,
   notifyOnSessionStart: false,
   notifyOnSessionStop: false,
@@ -211,6 +213,22 @@ describe('Settings Routes', () => {
 
       expect(response.statusCode).toBe(403);
       expect(response.json().message).toContain('Only server owners');
+    });
+
+    it('returns webhook format settings', async () => {
+      app = await buildTestApp(ownerUser);
+
+      mockDbSelectLimit([{ ...mockSettingsRow, webhookFormat: 'ntfy', ntfyTopic: 'my-topic' }]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/settings',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.webhookFormat).toBe('ntfy');
+      expect(body.ntfyTopic).toBe('my-topic');
     });
   });
 
@@ -601,6 +619,128 @@ describe('Settings Routes', () => {
       const body = response.json();
       expect(body.discordWebhookUrl).toBe(null);
       expect(body.customWebhookUrl).toBe(null);
+    });
+
+    it('updates webhook format to ntfy', async () => {
+      app = await buildTestApp(ownerUser);
+
+      let selectCount = 0;
+      vi.mocked(db.select).mockImplementation(() => {
+        selectCount++;
+        const chain = {
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue(
+            selectCount === 1
+              ? [mockSettingsRow]
+              : [{
+                  ...mockSettingsRow,
+                  webhookFormat: 'ntfy',
+                  ntfyTopic: 'tracearr-alerts',
+                }]
+          ),
+        };
+        return chain as never;
+      });
+      mockDbUpdate();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/settings',
+        payload: {
+          webhookFormat: 'ntfy',
+          ntfyTopic: 'tracearr-alerts',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.webhookFormat).toBe('ntfy');
+      expect(body.ntfyTopic).toBe('tracearr-alerts');
+    });
+
+    it('updates webhook format to apprise', async () => {
+      app = await buildTestApp(ownerUser);
+
+      let selectCount = 0;
+      vi.mocked(db.select).mockImplementation(() => {
+        selectCount++;
+        const chain = {
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue(
+            selectCount === 1
+              ? [mockSettingsRow]
+              : [{
+                  ...mockSettingsRow,
+                  webhookFormat: 'apprise',
+                }]
+          ),
+        };
+        return chain as never;
+      });
+      mockDbUpdate();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/settings',
+        payload: {
+          webhookFormat: 'apprise',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.webhookFormat).toBe('apprise');
+    });
+
+    it('rejects invalid webhook format', async () => {
+      app = await buildTestApp(ownerUser);
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/settings',
+        payload: {
+          webhookFormat: 'invalid-format',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('clears ntfy topic when set to null', async () => {
+      app = await buildTestApp(ownerUser);
+
+      let selectCount = 0;
+      vi.mocked(db.select).mockImplementation(() => {
+        selectCount++;
+        const chain = {
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue(
+            selectCount === 1
+              ? [{ ...mockSettingsRow, ntfyTopic: 'old-topic' }]
+              : [{
+                  ...mockSettingsRow,
+                  ntfyTopic: null,
+                }]
+          ),
+        };
+        return chain as never;
+      });
+      mockDbUpdate();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/settings',
+        payload: {
+          ntfyTopic: null,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.ntfyTopic).toBe(null);
     });
   });
 });
