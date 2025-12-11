@@ -475,6 +475,8 @@ export const settings = pgTable('settings', {
   allowGuestAccess: boolean('allow_guest_access').notNull().default(false),
   discordWebhookUrl: text('discord_webhook_url'),
   customWebhookUrl: text('custom_webhook_url'),
+  webhookFormat: text('webhook_format').$type<'json' | 'ntfy' | 'apprise'>(), // Format for custom webhook payloads
+  ntfyTopic: text('ntfy_topic'), // Topic for ntfy notifications (required when webhookFormat is 'ntfy')
   notifyOnViolation: boolean('notify_on_violation').notNull().default(true),
   notifyOnSessionStart: boolean('notify_on_session_start').notNull().default(false),
   notifyOnSessionStop: boolean('notify_on_session_stop').notNull().default(false),
