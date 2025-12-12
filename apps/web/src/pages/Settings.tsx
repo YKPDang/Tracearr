@@ -50,6 +50,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { PlexServerSelector } from '@/components/auth/PlexServerSelector';
+import { NotificationRoutingMatrix } from '@/components/settings/NotificationRoutingMatrix';
 import type { Server, Settings as SettingsType, TautulliImportProgress, MobileSession, MobileQRPayload } from '@tracearr/shared';
 import {
   useSettings,
@@ -672,10 +673,6 @@ function NotificationSettings() {
     }
   }, [settings]);
 
-  const handleToggle = (key: keyof SettingsType, value: boolean) => {
-    updateSettings.mutate({ [key]: value });
-  };
-
   const handleUrlChange = (key: 'discordWebhookUrl' | 'customWebhookUrl' | 'ntfyTopic', value: string) => {
     updateSettings.mutate({ [key]: value || null });
   };
@@ -709,64 +706,17 @@ function NotificationSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notification Settings
+            Notification Routing
           </CardTitle>
           <CardDescription>
-            Configure how and when you receive notifications
+            Configure which channels receive each notification type
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Violation Alerts</Label>
-              <p className="text-sm text-muted-foreground">
-                Send notification when a rule violation is detected
-              </p>
-            </div>
-            <Switch
-              checked={settings?.notifyOnViolation ?? true}
-              onCheckedChange={(checked) => { handleToggle('notifyOnViolation', checked); }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Session Start</Label>
-              <p className="text-sm text-muted-foreground">
-                Send notification when a new stream starts
-              </p>
-            </div>
-            <Switch
-              checked={settings?.notifyOnSessionStart ?? false}
-              onCheckedChange={(checked) => { handleToggle('notifyOnSessionStart', checked); }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Session Stop</Label>
-              <p className="text-sm text-muted-foreground">
-                Send notification when a stream ends
-              </p>
-            </div>
-            <Switch
-              checked={settings?.notifyOnSessionStop ?? false}
-              onCheckedChange={(checked) => { handleToggle('notifyOnSessionStop', checked); }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Server Down</Label>
-              <p className="text-sm text-muted-foreground">
-                Send notification when a server becomes unreachable
-              </p>
-            </div>
-            <Switch
-              checked={settings?.notifyOnServerDown ?? true}
-              onCheckedChange={(checked) => { handleToggle('notifyOnServerDown', checked); }}
-            />
-          </div>
+        <CardContent>
+          <NotificationRoutingMatrix
+            discordConfigured={!!settings?.discordWebhookUrl}
+            webhookConfigured={!!settings?.customWebhookUrl}
+          />
         </CardContent>
       </Card>
 
