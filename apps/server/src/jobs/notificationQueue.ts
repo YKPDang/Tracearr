@@ -169,12 +169,8 @@ async function processNotificationJob(job: Job<NotificationJobData>): Promise<vo
   const routing = await getChannelRouting(eventType);
 
   // Build settings object with routing-aware channel enablement
-  // The routing config overrides the channel availability
+  // The routing config controls which channels receive notifications
   const effectiveSettings = {
-    notifyOnViolation: settings.notifyOnViolation,
-    notifyOnSessionStart: settings.notifyOnSessionStart,
-    notifyOnSessionStop: settings.notifyOnSessionStop,
-    notifyOnServerDown: settings.notifyOnServerDown,
     // Only include webhook URLs if routing allows
     discordWebhookUrl: routing.discordEnabled ? settings.discordWebhookUrl : null,
     customWebhookUrl: routing.webhookEnabled ? settings.customWebhookUrl : null,

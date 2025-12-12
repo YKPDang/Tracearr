@@ -53,10 +53,6 @@ export class NotificationService {
     violation: ViolationWithDetails,
     settings: Settings
   ): Promise<void> {
-    if (!settings.notifyOnViolation) {
-      return;
-    }
-
     const promises: Promise<void>[] = [];
 
     if (settings.discordWebhookUrl) {
@@ -77,10 +73,6 @@ export class NotificationService {
    * Send session started notification
    */
   async notifySessionStarted(session: ActiveSession, settings: Settings): Promise<void> {
-    if (!settings.notifyOnSessionStart) {
-      return;
-    }
-
     const payload: NotificationPayload = {
       event: NOTIFICATION_EVENTS.STREAM_STARTED,
       timestamp: new Date().toISOString(),
@@ -100,10 +92,6 @@ export class NotificationService {
    * Send session stopped notification
    */
   async notifySessionStopped(session: ActiveSession, settings: Settings): Promise<void> {
-    if (!settings.notifyOnSessionStop) {
-      return;
-    }
-
     const payload: NotificationPayload = {
       event: NOTIFICATION_EVENTS.STREAM_STOPPED,
       timestamp: new Date().toISOString(),
@@ -123,10 +111,6 @@ export class NotificationService {
    * Send server down notification
    */
   async notifyServerDown(serverName: string, settings: Settings): Promise<void> {
-    if (!settings.notifyOnServerDown) {
-      return;
-    }
-
     const payload: NotificationPayload = {
       event: NOTIFICATION_EVENTS.SERVER_DOWN,
       timestamp: new Date().toISOString(),
@@ -150,11 +134,6 @@ export class NotificationService {
    * Send server up notification
    */
   async notifyServerUp(serverName: string, settings: Settings): Promise<void> {
-    if (!settings.notifyOnServerDown) {
-      // Use same setting as server down for now
-      return;
-    }
-
     const payload: NotificationPayload = {
       event: NOTIFICATION_EVENTS.SERVER_UP,
       timestamp: new Date().toISOString(),
