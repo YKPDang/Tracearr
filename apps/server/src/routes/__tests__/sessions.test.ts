@@ -120,6 +120,7 @@ function createActiveSession(overrides: Partial<ActiveSession> = {}): ActiveSess
       id: randomUUID(),
       username: 'testuser',
       thumbUrl: null,
+      identityName: null,
     },
     server: overrides.server ?? {
       id: serverId,
