@@ -1,8 +1,9 @@
-version: "3.8"
-
 services:
   timescale:
-    image: timescale/timescaledb:latest-pg15
+    build:
+      context: .
+      dockerfile: Dockerfile.timescale
+    image: tracearr-timescale:latest
     ports:
       - "5432:5432"
     environment:

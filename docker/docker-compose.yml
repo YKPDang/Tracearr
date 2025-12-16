@@ -29,7 +29,10 @@ services:
       - tracearr-network
 
   timescale:
-    image: timescale/timescaledb:latest-pg15
+    build:
+      context: .
+      dockerfile: Dockerfile.timescale
+    image: tracearr-timescale:latest
     environment:
       - POSTGRES_USER=tracearr
       - POSTGRES_PASSWORD=${DB_PASSWORD:-tracearr}

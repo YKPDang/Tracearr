@@ -59,6 +59,7 @@ RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmo
         postgresql-15 \
         timescaledb-2-postgresql-15 \
         timescaledb-tools \
+        timescaledb-toolkit-postgresql-15 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Redis
@@ -106,9 +107,10 @@ RUN mkdir -p /data/postgres /data/redis /data/tracearr /var/log/supervisor \
 # Supervisord configuration
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Startup script
+# Startup scripts
 COPY docker/entrypoint-supervised.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/start-tracearr.sh /start-tracearr.sh
+RUN chmod 755 /entrypoint.sh /start-tracearr.sh
 
 # Environment defaults
 ENV NODE_ENV=production \

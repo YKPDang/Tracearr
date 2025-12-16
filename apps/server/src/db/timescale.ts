@@ -252,9 +252,9 @@ async function createContentIndexes(): Promise<void> {
 }
 
 /**
- * Check if TimescaleDB Toolkit is available
+ * Check if TimescaleDB Toolkit is installed
  */
-async function isToolkitAvailable(): Promise<boolean> {
+async function isToolkitInstalled(): Promise<boolean> {
   try {
     const result = await db.execute(sql`
       SELECT EXISTS(
@@ -268,6 +268,22 @@ async function isToolkitAvailable(): Promise<boolean> {
 }
 
 /**
+ * Check if TimescaleDB Toolkit is available to be installed on the system
+ */
+async function isToolkitAvailableOnSystem(): Promise<boolean> {
+  try {
+    const result = await db.execute(sql`
+      SELECT EXISTS(
+        SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb_toolkit'
+      ) as available
+    `);
+    return (result.rows[0] as { available: boolean })?.available ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Create continuous aggregates for dashboard performance
  *
  * Uses HyperLogLog from TimescaleDB Toolkit for approximate distinct counts
@@ -275,7 +291,7 @@ async function isToolkitAvailable(): Promise<boolean> {
  * continuous aggregates. Falls back to COUNT(*) if Toolkit unavailable.
  */
 async function createContinuousAggregates(): Promise<void> {
-  const hasToolkit = await isToolkitAvailable();
+  const hasToolkit = await isToolkitInstalled();
 
   // Drop old unused aggregates
   // daily_plays_by_platform: platform stats use prepared statement instead
@@ -551,13 +567,18 @@ export async function initTimescaleDB(): Promise<{
   actions.push('TimescaleDB extension found');
 
   // Enable TimescaleDB Toolkit for HyperLogLog (approximate distinct counts)
-  try {
-    await db.execute(sql`CREATE EXTENSION IF NOT EXISTS timescaledb_toolkit`);
-    actions.push('TimescaleDB Toolkit extension enabled');
-  } catch {
-    // Toolkit may not be available in all installations
-    console.warn('TimescaleDB Toolkit not available - using standard aggregates');
-    actions.push('TimescaleDB Toolkit not available (optional)');
+  // Check if available first to avoid noisy PostgreSQL errors in logs
+  const toolkitAvailable = await isToolkitAvailableOnSystem();
+  if (toolkitAvailable) {
+    const toolkitInstalled = await isToolkitInstalled();
+    if (!toolkitInstalled) {
+      await db.execute(sql`CREATE EXTENSION IF NOT EXISTS timescaledb_toolkit`);
+      actions.push('TimescaleDB Toolkit extension enabled');
+    } else {
+      actions.push('TimescaleDB Toolkit extension already enabled');
+    }
+  } else {
+    actions.push('TimescaleDB Toolkit not available (optional - using standard aggregates)');
   }
 
   // Check if sessions is already a hypertable
