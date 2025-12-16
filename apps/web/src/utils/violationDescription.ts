@@ -62,6 +62,26 @@ export function getViolationDescription(violation: ViolationWithDetails, unitSys
 }
 
 /**
+ * Format a location object or value to a readable string
+ */
+function formatLocationValue(loc: unknown): string {
+  if (typeof loc === 'string') return loc;
+  if (loc && typeof loc === 'object') {
+    const obj = loc as Record<string, unknown>;
+    // Handle {city, country} format
+    if (obj.city || obj.country) {
+      const parts = [obj.city, obj.country].filter(Boolean);
+      return parts.join(', ') || 'Unknown';
+    }
+    // Handle {lat, lon} format - format as coordinates
+    if (typeof obj.lat === 'number' && typeof obj.lon === 'number') {
+      return `${obj.lat.toFixed(2)}°, ${obj.lon.toFixed(2)}°`;
+    }
+  }
+  return String(loc);
+}
+
+/**
  * Get detailed violation information formatted for display
  */
 export function getViolationDetails(violation: ViolationWithDetails, unitSystem: UnitSystem = 'metric'): Record<string, unknown> {
@@ -77,26 +97,40 @@ export function getViolationDetails(violation: ViolationWithDetails, unitSystem:
   switch (ruleType) {
     case 'impossible_travel': {
       if (data.fromCity) details['From City'] = data.fromCity;
-      if (data.fromLocation) details['From Location'] = data.fromLocation;
+      if (data.fromLocation) details['From Location'] = formatLocationValue(data.fromLocation);
       if (data.toCity) details['To City'] = data.toCity;
-      if (data.toLocation) details['To Location'] = data.toLocation;
+      if (data.toLocation) details['To Location'] = formatLocationValue(data.toLocation);
+      // Format previousLocation/currentLocation if present (lat/lon objects)
+      if (data.previousLocation) details['Previous Location'] = formatLocationValue(data.previousLocation);
+      if (data.currentLocation) details['Current Location'] = formatLocationValue(data.currentLocation);
       if (typeof data.calculatedSpeedKmh === 'number') {
         details['Calculated Speed'] = formatSpeed(data.calculatedSpeedKmh, unitSystem);
       }
       if (typeof data.distanceKm === 'number') {
         details['Distance'] = formatDistance(data.distanceKm, unitSystem);
       }
+      if (typeof data.distance === 'number') {
+        details['Distance'] = formatDistance(data.distance, unitSystem);
+      }
       if (typeof data.timeWindowMinutes === 'number') {
         details['Time Window'] = `${Math.round(data.timeWindowMinutes)} minutes`;
+      }
+      if (typeof data.timeDiffHours === 'number') {
+        const minutes = Math.round(data.timeDiffHours * 60);
+        details['Time Window'] = minutes < 60 ? `${minutes} minutes` : `${data.timeDiffHours.toFixed(1)} hours`;
       }
       break;
     }
     case 'simultaneous_locations': {
-      const locations = data.locations as string[] | undefined;
+      const locations = data.locations as unknown[] | undefined;
       const count = data.locationCount as number | undefined;
       if (count) details['Location Count'] = count;
       if (locations && locations.length > 0) {
-        details['Locations'] = locations;
+        // Convert location objects to readable strings
+        details['Locations'] = locations.map(formatLocationValue);
+      }
+      if (typeof data.distance === 'number') {
+        details['Distance Apart'] = formatDistance(data.distance, unitSystem);
       }
       break;
     }
