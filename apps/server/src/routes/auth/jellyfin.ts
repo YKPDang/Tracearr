@@ -14,7 +14,7 @@ import { JellyfinClient } from '../../services/mediaServer/index.js';
 // Token encryption removed - tokens now stored in plain text (DB is localhost-only)
 import { generateTokens } from './utils.js';
 import { syncServer } from '../../services/sync.js';
-import { getUserByUsername, createUser } from '../../services/userService.js';
+import { getUserByUsername, createOwnerUser } from '../../services/userService.js';
 
 // Schema for Jellyfin login
 const jellyfinLoginSchema = z.object({
@@ -68,23 +68,22 @@ export const jellyfinRoutes: FastifyPluginAsync = async (app) => {
             let user = await getUserByUsername(username);
 
             if (!user) {
-              // Create new user with admin role
-              user = await createUser({
+              // Create new user with owner role. Since Jellyfin doesn't distinguish roles beyond admin, we assign 'owner' here.
+              user = await createOwnerUser({
                 username,
-                role: 'admin',
                 email: undefined, // Jellyfin doesn't expose email in auth response
                 thumbnail: undefined, // Can be populated later via sync
               });
               app.log.info({ userId: user.id, username }, 'Created new user from Jellyfin admin login');
             } else {
-              // Update existing user role to admin if not already
-              if (user.role !== 'admin' && user.role !== 'owner') {
+              // Update existing user role to owner if not already
+              if (user.role !== 'owner') {
                 await db
                   .update(users)
-                  .set({ role: 'admin', updatedAt: new Date() })
+                  .set({ role: 'owner', updatedAt: new Date() })
                   .where(eq(users.id, user.id));
-                user.role = 'admin';
-                app.log.info({ userId: user.id, username }, 'Updated user role to admin from Jellyfin login');
+                user.role = 'owner';
+                app.log.info({ userId: user.id, username }, 'Updated user role to owner from Jellyfin login');
               }
             }
 
