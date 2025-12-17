@@ -4,6 +4,22 @@
 
 set -e
 
+# Supervised mode ALWAYS uses internal database/redis
+# If you need an external database, use the regular tracearr image instead
+INTERNAL_DB="postgresql://tracearr:tracearr@127.0.0.1:5432/tracearr"
+INTERNAL_REDIS="redis://127.0.0.1:6379"
+
+# Warn if user tried to set external DATABASE_URL (they should use regular image)
+if [ -n "$DATABASE_URL" ] && [ "$DATABASE_URL" != "$INTERNAL_DB" ]; then
+    echo "[Tracearr] WARNING: Custom DATABASE_URL detected in supervised mode"
+    echo "[Tracearr] The supervised image includes its own PostgreSQL - external databases are not supported"
+    echo "[Tracearr] If you need an external database, please use the regular 'tracearr:latest' image instead"
+    echo "[Tracearr] Your DATABASE_URL will be ignored. Using internal database."
+fi
+
+export DATABASE_URL="$INTERNAL_DB"
+export REDIS_URL="$INTERNAL_REDIS"
+
 MAX_RETRIES=30
 RETRY_INTERVAL=2
 
