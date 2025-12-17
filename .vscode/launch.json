@@ -1,0 +1,67 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Server",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": [
+                "--filter",
+                "@tracearr/server",
+                "dev"
+            ],
+            "restart": true,
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "NODE_OPTIONS": "--inspect=9229"
+            }
+        },
+        {
+            "name": "Debug Web (Chrome)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/apps/web",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/src/*"
+            }
+        },
+        {
+            "name": "Debug Web (Firefox)",
+            "type": "firefox",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "profile": "firefox-debugger",
+            "webRoot": "${workspaceFolder}/apps/web",
+            "pathMappings": [
+                {
+                    "url": "webpack:///src",
+                    "path": "${workspaceFolder}/apps/web/src"
+                }
+            ]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Debug All (Chrome)",
+            "configurations": [
+                "Debug Server",
+                "Debug Web (Chrome)"
+            ]
+        },
+        {
+            "name": "Debug All (Firefox)",
+            "configurations": [
+                "Debug Server",
+                "Debug Web (Firefox)"
+            ]
+        }
+    ]
+}

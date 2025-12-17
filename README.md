@@ -211,6 +211,11 @@ Contributions welcome. Please:
 
 Check the [issues](https://github.com/connorgallopo/Tracearr/issues) for things to work on.
 
+### Development with VS Code
+Use the included `.vscode/launch.json` to debug both server and web apps directly from VS Code.
+
+Run `pnpm dev` in a terminal to start both apps, then use the "Debug All" configuration to attach the debugger.
+
 ## Roadmap
 
 **Alpha** (current — v0.1.x)
