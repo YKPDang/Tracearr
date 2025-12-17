@@ -46,7 +46,8 @@ export const localRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest('Invalid signup data: email, username (3-50 chars), password (8+ chars) required');
     }
 
-    const { username, email, password } = body.data;
+    const { username, password } = body.data;
+    const email = body.data.email.toLowerCase();
 
     // Check if email already exists
     const existing = await getUserByEmail(email);
@@ -94,7 +95,8 @@ export const localRoutes: FastifyPluginAsync = async (app) => {
     const { type } = body.data;
 
     if (type === 'local') {
-      const { email, password } = body.data;
+      const { password } = body.data;
+      const email = body.data.email.toLowerCase();
 
       // Find user by email with password hash
       const userRows = await db
