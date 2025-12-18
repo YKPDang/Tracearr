@@ -133,10 +133,12 @@ export async function scheduleVersionChecks(): Promise<void> {
     return;
   }
 
-  // Remove any existing repeatable jobs
-  const repeatableJobs = await versionQueue.getRepeatableJobs();
-  for (const job of repeatableJobs) {
-    await versionQueue.removeRepeatableByKey(job.key);
+  // Remove any existing job schedulers (repeatable jobs)
+  const schedulers = await versionQueue.getJobSchedulers();
+  for (const scheduler of schedulers) {
+    if (scheduler.id) {
+      await versionQueue.removeJobScheduler(scheduler.id);
+    }
   }
 
   // Schedule a check every 6 hours (4 times per day)

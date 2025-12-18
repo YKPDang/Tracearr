@@ -8,14 +8,13 @@
  */
 
 import { eq, and, desc, isNull, gte, lte, inArray } from 'drizzle-orm';
-import { POLLING_INTERVALS, TIME_MS, REDIS_KEYS, SESSION_LIMITS, type ActiveSession, type SessionState, type Rule } from '@tracearr/shared';
+import { POLLING_INTERVALS, TIME_MS, SESSION_LIMITS, type ActiveSession, type SessionState, type Rule } from '@tracearr/shared';
 import { db } from '../../db/client.js';
 import { servers, serverUsers, sessions, users } from '../../db/schema.js';
 import { createMediaServerClient } from '../../services/mediaServer/index.js';
 import { geoipService, type GeoLocation } from '../../services/geoip.js';
 import { ruleEngine } from '../../services/rules.js';
 import type { CacheService, PubSubService } from '../../services/cache.js';
-import type { Redis } from 'ioredis';
 import { sseManager } from '../../services/sseManager.js';
 
 import type { PollerConfig, ServerWithToken, ServerProcessingResult } from './types.js';
@@ -39,7 +38,6 @@ let pollingInterval: NodeJS.Timeout | null = null;
 let staleSweepInterval: NodeJS.Timeout | null = null;
 let cacheService: CacheService | null = null;
 let pubSubService: PubSubService | null = null;
-let redisClient: Redis | null = null;
 
 const defaultConfig: PollerConfig = {
   enabled: true,
@@ -1102,12 +1100,11 @@ export async function sweepStaleSessions(): Promise<number> {
 // ============================================================================
 
 /**
- * Initialize the poller with cache services and Redis client
+ * Initialize the poller with cache services
  */
-export function initializePoller(cache: CacheService, pubSub: PubSubService, redis: Redis): void {
+export function initializePoller(cache: CacheService, pubSub: PubSubService): void {
   cacheService = cache;
   pubSubService = pubSub;
-  redisClient = redis;
 }
 
 /**

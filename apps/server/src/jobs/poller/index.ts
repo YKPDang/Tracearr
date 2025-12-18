@@ -15,8 +15,8 @@
  * @example
  * import { initializePoller, startPoller, stopPoller, sweepStaleSessions } from './jobs/poller';
  *
- * // Initialize with cache services and Redis client
- * initializePoller(cacheService, pubSubService, redis);
+ * // Initialize with cache services
+ * initializePoller(cacheService, pubSubService);
  *
  * // Start polling (also starts stale session sweep on 60s interval)
  * startPoller({ enabled: true, intervalMs: 15000 });

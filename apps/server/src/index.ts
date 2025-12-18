@@ -248,8 +248,8 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
     // Don't throw - version checks are non-critical
   }
 
-  // Initialize poller with cache services and Redis client
-  initializePoller(cacheService, pubSubService, app.redis);
+  // Initialize poller with cache services
+  initializePoller(cacheService, pubSubService);
 
   // Initialize SSE manager and processor for real-time Plex updates
   try {
