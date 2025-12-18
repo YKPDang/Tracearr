@@ -16,6 +16,7 @@ import {
   timestamp,
   boolean,
   integer,
+  bigint,
   real,
   jsonb,
   index,
@@ -184,12 +185,12 @@ export const sessions = pgTable(
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     stoppedAt: timestamp('stopped_at', { withTimezone: true }),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(), // Last time session was seen in poll (for stale detection) - no default, app always provides
-    durationMs: integer('duration_ms'), // Actual watch duration (excludes paused time)
-    totalDurationMs: integer('total_duration_ms'), // Total media length
-    progressMs: integer('progress_ms'), // Current playback position
+    durationMs: bigint('duration_ms', { mode: 'number' }), // Actual watch duration (excludes paused time)
+    totalDurationMs: bigint('total_duration_ms', { mode: 'number' }), // Total media length
+    progressMs: bigint('progress_ms', { mode: 'number' }), // Current playback position
     // Pause tracking - accumulates total paused time across pause/resume cycles
     lastPausedAt: timestamp('last_paused_at', { withTimezone: true }), // When current pause started
-    pausedDurationMs: integer('paused_duration_ms').notNull().default(0), // Accumulated pause time
+    pausedDurationMs: bigint('paused_duration_ms', { mode: 'number' }).notNull().default(0), // Accumulated pause time
     // Session grouping for "resume where left off" tracking
     referenceId: uuid('reference_id'), // Links to first session in resume chain
     watched: boolean('watched').notNull().default(false), // True if user watched 85%+
