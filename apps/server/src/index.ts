@@ -45,6 +45,7 @@ import { debugRoutes } from './routes/debug.js';
 import { mobileRoutes } from './routes/mobile.js';
 import { notificationPreferencesRoutes } from './routes/notificationPreferences.js';
 import { channelRoutingRoutes } from './routes/channelRouting.js';
+import { versionRoutes } from './routes/version.js';
 import { getPollerSettings, getNetworkSettings } from './routes/settings.js';
 import { initializeEncryption, migrateToken, looksEncrypted } from './utils/crypto.js';
 import { geoipService } from './services/geoip.js';
@@ -63,6 +64,12 @@ import {
   startImportWorker,
   shutdownImportQueue,
 } from './jobs/importQueue.js';
+import {
+  initVersionCheckQueue,
+  startVersionCheckWorker,
+  scheduleVersionChecks,
+  shutdownVersionCheckQueue,
+} from './jobs/versionCheckQueue.js';
 import { initPushRateLimiter } from './services/pushRateLimiter.js';
 import { db, runMigrations } from './db/client.js';
 import { initTimescaleDB, getTimescaleStatus } from './db/timescale.js';
@@ -230,6 +237,17 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
     // Don't throw - imports can fall back to direct execution
   }
 
+  // Initialize version check queue (uses Redis for job storage and caching)
+  try {
+    initVersionCheckQueue(redisUrl, app.redis, pubSubService.publish.bind(pubSubService));
+    startVersionCheckWorker();
+    void scheduleVersionChecks();
+    app.log.info('Version check queue initialized');
+  } catch (err) {
+    app.log.error({ err }, 'Failed to initialize version check queue');
+    // Don't throw - version checks are non-critical
+  }
+
   // Initialize poller with cache services and Redis client
   initializePoller(cacheService, pubSubService, app.redis);
 
@@ -243,7 +261,7 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
     // Don't throw - SSE is optional, fallback to polling
   }
 
-  // Cleanup pub/sub redis, notification queue, and import queue on close
+  // Cleanup pub/sub redis, notification queue, import queue, and version check queue on close
   app.addHook('onClose', async () => {
     await pubSubRedis.quit();
     stopPoller();
@@ -251,6 +269,7 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
     stopSSEProcessor();
     await shutdownNotificationQueue();
     await shutdownImportQueue();
+    await shutdownVersionCheckQueue();
   });
 
   // Health check endpoint
@@ -314,6 +333,7 @@ async function buildApp(options: { trustProxy?: boolean } = {}) {
   await app.register(debugRoutes, { prefix: `${API_BASE_PATH}/debug` });
   await app.register(mobileRoutes, { prefix: `${API_BASE_PATH}/mobile` });
   await app.register(notificationPreferencesRoutes, { prefix: `${API_BASE_PATH}/notifications` });
+  await app.register(versionRoutes, { prefix: `${API_BASE_PATH}/version` });
 
   // Serve static frontend in production
   const webDistPath = resolve(PROJECT_ROOT, 'apps/web/dist');
@@ -349,6 +369,7 @@ async function start() {
         stopPoller();
         void shutdownNotificationQueue();
         void shutdownImportQueue();
+        void shutdownVersionCheckQueue();
         void app.close().then(() => process.exit(0));
       });
     }
@@ -400,6 +421,9 @@ async function start() {
             break;
           case WS_EVENTS.IMPORT_PROGRESS:
             broadcastToSessions('import:progress', data as TautulliImportProgress);
+            break;
+          case WS_EVENTS.VERSION_UPDATE:
+            broadcastToSessions('version:update', data as { current: string; latest: string; releaseUrl: string });
             break;
           default:
             // Unknown event, ignore

@@ -58,6 +58,7 @@ export const WS_EVENTS = {
   IMPORT_PROGRESS: 'import:progress',
   SUBSCRIBE_SESSIONS: 'subscribe:sessions',
   UNSUBSCRIBE_SESSIONS: 'unsubscribe:sessions',
+  VERSION_UPDATE: 'version:update',
 } as const;
 
 // Redis key prefixes
@@ -84,6 +85,8 @@ export const REDIS_KEYS = {
     const serverHash = serverIds.length > 0 ? serverIds.slice().sort().join(',') : 'all';
     return `tracearr:filters:locations:${userId}:${serverHash}`;
   },
+  // Version check cache
+  VERSION_LATEST: 'tracearr:version:latest',
 } as const;
 
 // Cache TTLs in seconds
@@ -94,6 +97,7 @@ export const CACHE_TTL = {
   RATE_LIMIT: 900,
   SERVER_HEALTH: 600, // 10 minutes - servers marked unhealthy if no update
   LOCATION_FILTERS: 300, // 5 minutes - filter options change infrequently
+  VERSION_CHECK: 21600, // 6 hours - version check interval
 } as const;
 
 // Notification event types (must match NotificationEventType in types.ts)

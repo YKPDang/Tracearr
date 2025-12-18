@@ -106,6 +106,8 @@ export type {
   PlexDiscoveredConnection,
   PlexDiscoveredServer,
   PlexAvailableServersResponse,
+  // Version
+  VersionInfo,
 } from './types.js';
 
 // Schema exports

@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from 'react-router';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ArrowUpCircle, ExternalLink } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -19,10 +20,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/brand/Logo';
 import { ServerSelector } from './ServerSelector';
 import { navigation, isNavGroup, type NavItem, type NavGroup } from './nav-data';
 import { cn } from '@/lib/utils';
+import { useVersion } from '@/hooks/queries';
 
 function NavMenuItem({ item }: { item: NavItem }) {
   const { setOpenMobile } = useSidebar();
@@ -88,6 +91,53 @@ function NavMenuGroup({ group }: { group: NavGroup }) {
   );
 }
 
+function VersionDisplay() {
+  const { data: version, isLoading } = useVersion();
+
+  if (isLoading || !version) {
+    return (
+      <div className="text-xs text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  const displayVersion = version.current.tag
+    ? `${version.current.tag}`
+    : `v${version.current.version}`;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">
+          {displayVersion}
+        </span>
+        {version.updateAvailable && version.latest && (
+          <Badge
+            variant="secondary"
+            className="h-5 gap-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 dark:text-green-400 cursor-pointer"
+            onClick={() => window.open(version.latest!.releaseUrl, '_blank')}
+          >
+            <ArrowUpCircle className="h-3 w-3" />
+            <span className="text-[10px]">Update</span>
+          </Badge>
+        )}
+      </div>
+      {version.updateAvailable && version.latest && (
+        <a
+          href={version.latest.releaseUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <span>{version.latest.tag} available</span>
+          <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 export function AppSidebar() {
   return (
     <Sidebar>
@@ -111,6 +161,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t">
+        <VersionDisplay />
+      </SidebarFooter>
     </Sidebar>
   );
 }

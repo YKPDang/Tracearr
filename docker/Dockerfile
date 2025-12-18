@@ -1,6 +1,12 @@
 # Build stage
 FROM node:22-alpine AS builder
 
+# Build arguments for version info
+ARG APP_VERSION=0.0.0
+ARG APP_TAG=
+ARG APP_COMMIT=
+ARG APP_BUILD_DATE=
+
 RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 
 WORKDIR /app
@@ -25,11 +31,22 @@ RUN pnpm turbo run build --filter=@tracearr/shared --filter=@tracearr/server --f
 # Production stage
 FROM node:22-alpine AS runner
 
+# Build arguments for version info (must redeclare in each stage)
+ARG APP_VERSION=0.0.0
+ARG APP_TAG=
+ARG APP_COMMIT=
+ARG APP_BUILD_DATE=
+
 RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 
 WORKDIR /app
 
+# Set runtime environment variables
 ENV NODE_ENV=production
+ENV APP_VERSION=${APP_VERSION}
+ENV APP_TAG=${APP_TAG}
+ENV APP_COMMIT=${APP_COMMIT}
+ENV APP_BUILD_DATE=${APP_BUILD_DATE}
 
 # Copy package files for production install
 COPY --from=builder /app/package.json ./

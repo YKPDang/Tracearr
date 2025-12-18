@@ -237,6 +237,11 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
+            APP_TAG=${{ github.ref_name }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
       - name: Export digest
         run: |
@@ -355,6 +360,11 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=supervised-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=supervised-${{ matrix.arch }}
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
+            APP_TAG=supervised-${{ github.ref_name }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
       - name: Export digest
         run: |

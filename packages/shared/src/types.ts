@@ -531,6 +531,7 @@ export interface ServerToClientEvents {
   'violation:new': (violation: ViolationWithDetails) => void;
   'stats:updated': (stats: DashboardStats) => void;
   'import:progress': (progress: TautulliImportProgress) => void;
+  'version:update': (data: { current: string; latest: string; releaseUrl: string }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -984,4 +985,30 @@ export interface PlexDiscoveredServer {
 export interface PlexAvailableServersResponse {
   servers: PlexDiscoveredServer[];
   hasPlexToken: boolean; // False if user has no Plex servers connected
+}
+
+// =============================================================================
+// Version & Update Types
+// =============================================================================
+
+// Version information returned by the /version endpoint
+export interface VersionInfo {
+  // Current running version
+  current: {
+    version: string; // Semantic version (e.g., "1.3.8")
+    tag: string | null; // Docker tag (e.g., "latest", "stable", "v1.3.8")
+    commit: string | null; // Git commit SHA (short)
+    buildDate: string | null; // ISO date of build
+  };
+  // Latest available version (null if check hasn't run yet)
+  latest: {
+    version: string;
+    tag: string;
+    releaseUrl: string;
+    publishedAt: string;
+  } | null;
+  // Update status
+  updateAvailable: boolean;
+  // When the last check occurred (ISO timestamp)
+  lastChecked: string | null;
 }

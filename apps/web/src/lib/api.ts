@@ -30,6 +30,7 @@ import type {
   HistorySessionResponse,
   HistoryFilterOptions,
   HistoryQueryInput,
+  VersionInfo,
 } from '@tracearr/shared';
 
 // Re-export shared types needed by frontend components
@@ -733,6 +734,12 @@ class ApiClient {
       this.request<{ success: boolean }>(`/mobile/sessions/${id}`, { method: 'DELETE' }),
     revokeSessions: () =>
       this.request<{ success: boolean; revokedCount: number }>('/mobile/sessions', { method: 'DELETE' }),
+  };
+
+  // Version info
+  version = {
+    get: () => this.request<VersionInfo>('/version'),
+    check: () => this.request<{ message: string }>('/version/check', { method: 'POST', body: '{}' }),
   };
 }
 

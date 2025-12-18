@@ -4,6 +4,12 @@
 
 FROM node:22-bookworm-slim AS builder
 
+# Build arguments for version info
+ARG APP_VERSION=0.0.0
+ARG APP_TAG=
+ARG APP_COMMIT=
+ARG APP_BUILD_DATE=
+
 RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
 
 WORKDIR /app
@@ -112,6 +118,12 @@ COPY docker/entrypoint-supervised.sh /entrypoint.sh
 COPY docker/start-tracearr.sh /start-tracearr.sh
 RUN chmod 755 /entrypoint.sh /start-tracearr.sh
 
+# Build arguments for version info (must redeclare in each stage)
+ARG APP_VERSION=0.0.0
+ARG APP_TAG=
+ARG APP_COMMIT=
+ARG APP_BUILD_DATE=
+
 # Environment defaults
 ENV NODE_ENV=production \
     LOG_LEVEL=info \
@@ -119,7 +131,11 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     TZ=UTC \
     DATABASE_URL=postgresql://tracearr:tracearr@127.0.0.1:5432/tracearr \
-    REDIS_URL=redis://127.0.0.1:6379
+    REDIS_URL=redis://127.0.0.1:6379 \
+    APP_VERSION=${APP_VERSION} \
+    APP_TAG=${APP_TAG} \
+    APP_COMMIT=${APP_COMMIT} \
+    APP_BUILD_DATE=${APP_BUILD_DATE}
 
 # Expose only the web port
 EXPOSE 3000

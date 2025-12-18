@@ -74,3 +74,6 @@ export {
   useRevokeSession,
   useRevokeMobileSessions,
 } from './useMobile';
+
+// Version hooks
+export { useVersion, useForceVersionCheck } from './useVersion';
