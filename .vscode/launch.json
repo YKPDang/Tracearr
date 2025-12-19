@@ -2,25 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Server",
+            "name": "Attach to Server",
             "type": "node",
-            "request": "launch",
-            "runtimeExecutable": "pnpm",
-            "runtimeArgs": [
-                "--filter",
-                "@tracearr/server",
-                "dev"
-            ],
+            "request": "attach",
+            "port": 9229,
             "restart": true,
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
             "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "NODE_OPTIONS": "--inspect=9229"
-            }
+                "<node_internals>/**",
+                "**/node_modules/**"
+            ]
         },
         {
             "name": "Debug Web (Chrome)",
@@ -52,14 +42,14 @@
         {
             "name": "Debug All (Chrome)",
             "configurations": [
-                "Debug Server",
+                "Attach to Server",
                 "Debug Web (Chrome)"
             ]
         },
         {
             "name": "Debug All (Firefox)",
             "configurations": [
-                "Debug Server",
+                "Attach to Server",
                 "Debug Web (Firefox)"
             ]
         }
