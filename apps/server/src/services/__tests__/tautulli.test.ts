@@ -1056,7 +1056,7 @@ describe('GeoIP Integration', () => {
   }
 
   it('should resolve public IP to geo data', () => {
-    const geo = mockGeoipLookup(REAL_MOVIE_RECORD.ip_address);
+    const geo = mockGeoipLookup(REAL_MOVIE_RECORD.ip_address!);
     expect(geo.city).toBe('Jersey City');
     expect(geo.region).toBe('New Jersey');
     expect(geo.country).toBe('US');
@@ -1082,11 +1082,11 @@ describe('GeoIP Integration', () => {
 
   it('should use IP from record for lookup', () => {
     // Movie record has public IP
-    const movieGeo = mockGeoipLookup(REAL_MOVIE_RECORD.ip_address);
+    const movieGeo = mockGeoipLookup(REAL_MOVIE_RECORD.ip_address!);
     expect(movieGeo.country).toBe('US');
 
     // Track record has different public IP
-    const trackGeo = mockGeoipLookup(REAL_TRACK_RECORD.ip_address);
+    const trackGeo = mockGeoipLookup(REAL_TRACK_RECORD.ip_address!);
     expect(trackGeo.city).toBe('Columbus');
   });
 });

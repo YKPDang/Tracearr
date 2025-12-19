@@ -49,7 +49,7 @@ export const TautulliHistoryRecordSchema = z.object({
   platform: z.string().nullable(),
   product: z.string().nullable(),
   player: z.string().nullable(),
-  ip_address: z.string(),
+  ip_address: z.string().nullable(),
   machine_id: z.string().nullable(),
   location: z.string().nullable(),
 
@@ -716,10 +716,11 @@ export class TautulliService {
           }
 
           // === OPTIMIZATION: Cached GeoIP lookup ===
-          let geo = geoCache.get(record.ip_address);
+          const ipForLookup = record.ip_address ?? '0.0.0.0';
+          let geo = geoCache.get(ipForLookup);
           if (!geo) {
-            geo = geoipService.lookup(record.ip_address);
-            geoCache.set(record.ip_address, geo);
+            geo = geoipService.lookup(ipForLookup);
+            geoCache.set(ipForLookup, geo);
           }
 
           // Map media type
