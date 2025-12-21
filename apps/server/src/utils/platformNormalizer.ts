@@ -39,7 +39,7 @@ export interface NormalizedClient {
 export function normalizeClient(
   client: string,
   deviceType?: string,
-  serverType?: 'plex' | 'jellyfin' | 'emby'
+  _serverType?: 'plex' | 'jellyfin' | 'emby'
 ): NormalizedClient {
   // If deviceType is provided and meaningful, use it as device but still normalize platform
   const hasValidDeviceType = deviceType && deviceType.length > 0 && deviceType !== 'Unknown';
@@ -51,7 +51,10 @@ export function normalizeClient(
   // Legacy/Mystery Plex Clients (from Tautulli naming conventions)
   // ============================================================================
   if (clientLower === 'konvergo') {
-    return { platform: 'Plex Media Player', device: hasValidDeviceType ? deviceType : 'Plex Media Player' };
+    return {
+      platform: 'Plex Media Player',
+      device: hasValidDeviceType ? deviceType : 'Plex Media Player',
+    };
   }
   if (clientLower === 'mystery 3') {
     return { platform: 'PlayStation', device: hasValidDeviceType ? deviceType : 'PlayStation 3' };
@@ -111,7 +114,11 @@ export function normalizeClient(
   if (clientLower.includes('samsung') || clientLower.includes('tizen')) {
     return { platform: 'Tizen', device: hasValidDeviceType ? deviceType : 'Samsung TV' };
   }
-  if (clientLower.includes('webos') || clientLower.includes('lg') || clientLower.includes('netcast')) {
+  if (
+    clientLower.includes('webos') ||
+    clientLower.includes('lg') ||
+    clientLower.includes('netcast')
+  ) {
     return { platform: 'webOS', device: hasValidDeviceType ? deviceType : 'LG TV' };
   }
   if (clientLower.includes('roku')) {
@@ -141,7 +148,11 @@ export function normalizeClient(
   if (clientLower.includes('xbox')) {
     return { platform: 'Xbox', device: hasValidDeviceType ? deviceType : 'Xbox' };
   }
-  if (clientLower.includes('playstation') || clientLower.includes('ps4') || clientLower.includes('ps5')) {
+  if (
+    clientLower.includes('playstation') ||
+    clientLower.includes('ps4') ||
+    clientLower.includes('ps5')
+  ) {
     return { platform: 'PlayStation', device: hasValidDeviceType ? deviceType : 'PlayStation' };
   }
   if (clientLower.includes('wii') || clientLower.includes('wiiu')) {
@@ -228,7 +239,10 @@ export function normalizeClient(
     return { platform: 'Plex HTPC', device: hasValidDeviceType ? deviceType : 'Plex HTPC' };
   }
   if (clientLower.includes('plex media player')) {
-    return { platform: 'Plex Media Player', device: hasValidDeviceType ? deviceType : 'Plex Media Player' };
+    return {
+      platform: 'Plex Media Player',
+      device: hasValidDeviceType ? deviceType : 'Plex Media Player',
+    };
   }
   if (clientLower.includes('synclounge') || clientLower.includes('plextogether')) {
     return { platform: 'SyncLounge', device: hasValidDeviceType ? deviceType : 'SyncLounge' };
@@ -270,65 +284,65 @@ export function normalizePlatformName(platform: string): string {
   // Note: More specific keys should come before less specific ones for partial matching
   const platformMap: Record<string, string> = {
     // Mobile
-    'ios': 'iOS',
+    ios: 'iOS',
     'android tv': 'Android TV',
-    'androidtv': 'Android TV',
-    'android': 'Android',
+    androidtv: 'Android TV',
+    android: 'Android',
     // Apple
-    'tvos': 'tvOS',
+    tvos: 'tvOS',
     'apple tv': 'tvOS',
-    'macos': 'macOS',
+    macos: 'macOS',
     'mac os': 'macOS',
-    'osx': 'macOS',
+    osx: 'macOS',
     // Smart TVs
-    'roku': 'Roku',
-    'tizen': 'Tizen',
-    'samsung': 'Tizen',
-    'webos': 'webOS',
-    'netcast': 'webOS',
+    roku: 'Roku',
+    tizen: 'Tizen',
+    samsung: 'Tizen',
+    webos: 'webOS',
+    netcast: 'webOS',
     'fire tv': 'Fire TV',
-    'firetv': 'Fire TV',
-    'vizio': 'Vizio',
-    'chromecast': 'Chromecast',
-    'dlna': 'DLNA',
+    firetv: 'Fire TV',
+    vizio: 'Vizio',
+    chromecast: 'Chromecast',
+    dlna: 'DLNA',
     // Gaming
-    'xbox': 'Xbox',
-    'playstation': 'PlayStation',
-    'wiiu': 'Wii U',
+    xbox: 'Xbox',
+    playstation: 'PlayStation',
+    wiiu: 'Wii U',
     'wii u': 'Wii U',
-    'wii': 'Wii U',
+    wii: 'Wii U',
     // Desktop
-    'windows': 'Windows',
-    'linux': 'Linux',
+    windows: 'Windows',
+    linux: 'Linux',
     // Browsers
-    'chrome': 'Chrome',
-    'safari': 'Safari',
-    'firefox': 'Firefox',
-    'edge': 'Edge',
-    'opera': 'Opera',
-    'web': 'Web',
+    chrome: 'Chrome',
+    safari: 'Safari',
+    firefox: 'Firefox',
+    edge: 'Edge',
+    opera: 'Opera',
+    web: 'Web',
     // Media Players
-    'kodi': 'Kodi',
-    'infuse': 'Infuse',
-    'vlc': 'VLC',
-    'mpv': 'MPV',
+    kodi: 'Kodi',
+    infuse: 'Infuse',
+    vlc: 'VLC',
+    mpv: 'MPV',
     // Plex clients
     'plex web': 'Web',
     'plex for ios': 'iOS',
     'plex for android': 'Android',
-    'plexamp': 'Plexamp',
+    plexamp: 'Plexamp',
     'plex htpc': 'Plex HTPC',
     'plex media player': 'Plex Media Player',
-    'synclounge': 'SyncLounge',
-    'plextogether': 'SyncLounge',
-    'konvergo': 'Plex Media Player',
+    synclounge: 'SyncLounge',
+    plextogether: 'SyncLounge',
+    konvergo: 'Plex Media Player',
     // Jellyfin clients
-    'swiftfin': 'tvOS',
-    'findroid': 'Android',
-    'finamp': 'Finamp',
-    'streamyfin': 'Streamyfin',
-    'jellybox': 'JellyBox',
-    'gelli': 'Gelli',
+    swiftfin: 'tvOS',
+    findroid: 'Android',
+    finamp: 'Finamp',
+    streamyfin: 'Streamyfin',
+    jellybox: 'JellyBox',
+    gelli: 'Gelli',
   };
 
   // Check exact matches first

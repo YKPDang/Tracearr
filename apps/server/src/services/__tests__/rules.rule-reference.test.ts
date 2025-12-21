@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { RuleEngine, type RuleEvaluationResult } from '../rules.js';
+import { RuleEngine } from '../rules.js';
 import { createMockSession, createMockRule } from '../../test/fixtures.js';
 
 describe('RuleEngine - Rule Reference in Results', () => {

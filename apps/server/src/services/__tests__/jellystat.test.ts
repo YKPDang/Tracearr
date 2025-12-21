@@ -737,7 +737,8 @@ describe('transformActivityToSession', () => {
       const session = transformActivityToSession(MOVIE_ACTIVITY, serverId, serverUserId, mockGeo);
 
       expect(session.product).toBe('Jellyfin Web');
-      expect(session.platform).toBe('Jellyfin Web');
+      // Platform is normalized by normalizeClient
+      expect(session.platform).toBe('Web');
     });
   });
 
@@ -817,7 +818,8 @@ describe('transformActivityToSession', () => {
         mockGeo
       );
 
-      expect(session.device).toBe('Jellyfin Web');
+      // Device is normalized by normalizeClient when DeviceName is null
+      expect(session.device).toBe('Browser');
     });
   });
 

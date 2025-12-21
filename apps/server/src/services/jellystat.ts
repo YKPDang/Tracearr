@@ -201,7 +201,7 @@ export function transformActivityToSession(
     ipAddress: activity.RemoteEndPoint ?? '0.0.0.0',
     geoCity: geo.city,
     geoRegion: geo.region,
-    geoCountry: geo.country,
+    geoCountry: geo.countryCode,
     geoLat: geo.lat,
     geoLon: geo.lon,
     // Normalize client info for consistency with live sessions

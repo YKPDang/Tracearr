@@ -6,7 +6,7 @@
  */
 
 import { eq, and, desc, isNull, gte } from 'drizzle-orm';
-import { TIME_MS, type Rule, type ActiveSession } from '@tracearr/shared';
+import { TIME_MS, type ActiveSession } from '@tracearr/shared';
 import { db } from '../../db/client.js';
 import { sessions } from '../../db/schema.js';
 import type { GeoLocation } from '../../services/geoip.js';
@@ -18,7 +18,6 @@ import {
 } from './stateTracker.js';
 import {
   createViolationInTransaction,
-  doesRuleApplyToUser,
   isDuplicateViolation,
   type ViolationInsertResult,
 } from './violations.js';
@@ -161,7 +160,7 @@ export function buildActiveSession(input: BuildActiveSessionInput): ActiveSessio
     ipAddress: processed.ipAddress,
     geoCity: geo.city,
     geoRegion: geo.region,
-    geoCountry: geo.country,
+    geoCountry: geo.countryCode,
     geoLat: geo.lat,
     geoLon: geo.lon,
     playerName: processed.playerName,
@@ -357,7 +356,7 @@ export async function createSessionWithRulesAtomic(
         ipAddress: processed.ipAddress,
         geoCity: geo.city,
         geoRegion: geo.region,
-        geoCountry: geo.country,
+        geoCountry: geo.countryCode,
         geoLat: geo.lat,
         geoLon: geo.lon,
         playerName: processed.playerName,
@@ -406,7 +405,7 @@ export async function createSessionWithRulesAtomic(
       ipAddress: processed.ipAddress,
       geoCity: geo.city,
       geoRegion: geo.region,
-      geoCountry: geo.country,
+      geoCountry: geo.countryCode,
       geoLat: geo.lat,
       geoLon: geo.lon,
       playerName: processed.playerName,

@@ -5,6 +5,10 @@
  * These functions have no side effects and are easily testable.
  */
 
+import { normalizeClient } from '../../utils/platformNormalizer.js';
+
+export const parseJellyfinClient = normalizeClient;
+
 // ============================================================================
 // IP Address Utilities
 // ============================================================================

@@ -145,7 +145,9 @@ describe('Poller Stress Test', () => {
       }
 
       await db.insert(sessions).values(sessionsToCreate);
-      process.stdout.write(`\r   Progress: ${Math.min((i + 1) * batchSize, CONFIG.HISTORICAL_SESSIONS)}/${CONFIG.HISTORICAL_SESSIONS}`);
+      process.stdout.write(
+        `\r   Progress: ${Math.min((i + 1) * batchSize, CONFIG.HISTORICAL_SESSIONS)}/${CONFIG.HISTORICAL_SESSIONS}`
+      );
     }
     console.log('\n   ✓ Historical sessions created\n');
   });
@@ -200,7 +202,9 @@ describe('Poller Stress Test', () => {
       const minTime = Math.min(...queryTimes);
 
       console.log(`\n   📈 findActiveSession Query Performance:`);
-      console.log(`      Table size: ~${CONFIG.HISTORICAL_SESSIONS + CONFIG.CONCURRENT_STREAMS} rows`);
+      console.log(
+        `      Table size: ~${CONFIG.HISTORICAL_SESSIONS + CONFIG.CONCURRENT_STREAMS} rows`
+      );
       console.log(`      Queries: ${queryTimes.length}`);
       console.log(`      Avg time: ${avgTime.toFixed(2)}ms`);
       console.log(`      Min time: ${minTime.toFixed(2)}ms`);
@@ -213,12 +217,7 @@ describe('Poller Stress Test', () => {
       for (const sessionKey of activeSessionKeys) {
         await db
           .delete(sessions)
-          .where(
-            and(
-              eq(sessions.serverId, testServerId),
-              eq(sessions.sessionKey, sessionKey)
-            )
-          );
+          .where(and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey)));
       }
     });
 
@@ -269,9 +268,7 @@ describe('Poller Stress Test', () => {
       // Cleanup
       await db
         .delete(sessions)
-        .where(
-          and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey))
-        );
+        .where(and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey)));
     });
   });
 
@@ -337,12 +334,7 @@ describe('Poller Stress Test', () => {
       for (const sessionKey of activeSessionKeys) {
         await db
           .delete(sessions)
-          .where(
-            and(
-              eq(sessions.serverId, testServerId),
-              eq(sessions.sessionKey, sessionKey)
-            )
-          );
+          .where(and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey)));
       }
     });
   });
@@ -393,9 +385,7 @@ describe('Poller Stress Test', () => {
       // Cleanup
       await db
         .delete(sessions)
-        .where(
-          and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey))
-        );
+        .where(and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey)));
     });
   });
 
@@ -436,7 +426,12 @@ describe('Poller Stress Test', () => {
         .join('\n');
 
       console.log(`\n   📋 Query Plan:`);
-      console.log(explainOutput.split('\n').map(line => `      ${line}`).join('\n'));
+      console.log(
+        explainOutput
+          .split('\n')
+          .map((line) => `      ${line}`)
+          .join('\n')
+      );
 
       // Check if index is being used
       const usesIndex =
@@ -459,9 +454,7 @@ describe('Poller Stress Test', () => {
       // Cleanup
       await db
         .delete(sessions)
-        .where(
-          and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey))
-        );
+        .where(and(eq(sessions.serverId, testServerId), eq(sessions.sessionKey, sessionKey)));
     });
   });
 });

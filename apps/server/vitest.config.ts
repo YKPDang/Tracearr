@@ -22,7 +22,12 @@ export default mergeConfig(
     test: {
       // Run all unit + security tests (excludes integration)
       include: ['src/**/*.test.ts'],
-      exclude: ['**/node_modules/**', '**/dist/**', '**/*.integration.test.ts', '**/test/stress/**'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/*.integration.test.ts',
+        '**/test/stress/**',
+      ],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
