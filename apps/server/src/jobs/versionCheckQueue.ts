@@ -279,17 +279,13 @@ async function processVersionCheck(job: Job<VersionCheckJobData>): Promise<void>
     const currentVersion = getCurrentVersion();
     const currentIsPrerelease = isPrerelease(currentVersion);
 
-    console.log(
-      `Current version: ${currentVersion} (prerelease: ${currentIsPrerelease})`
-    );
+    console.log(`Current version: ${currentVersion} (prerelease: ${currentIsPrerelease})`);
 
     let targetRelease: GitHubRelease | null = null;
 
     if (currentIsPrerelease) {
       // For prerelease users, fetch all releases to find the best update
-      const releases = await fetchGitHubReleases(
-        `${GITHUB_API_ALL_RELEASES_URL}?per_page=30`
-      );
+      const releases = await fetchGitHubReleases(`${GITHUB_API_ALL_RELEASES_URL}?per_page=30`);
 
       if (!releases || !Array.isArray(releases)) {
         console.log('No releases found or invalid response');
@@ -320,8 +316,7 @@ async function processVersionCheck(job: Job<VersionCheckJobData>): Promise<void>
     const latestData: LatestVersionData = {
       version,
       tag: targetRelease.tag_name,
-      releaseUrl:
-        targetRelease.html_url || `${GITHUB_RELEASES_URL}/tag/${targetRelease.tag_name}`,
+      releaseUrl: targetRelease.html_url || `${GITHUB_RELEASES_URL}/tag/${targetRelease.tag_name}`,
       publishedAt: targetRelease.published_at,
       checkedAt: new Date().toISOString(),
       isPrerelease: targetRelease.prerelease,

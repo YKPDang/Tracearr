@@ -133,7 +133,7 @@ function VersionDisplay() {
         {version.updateAvailable && version.latest && (
           <button
             onClick={() => setDialogOpen(true)}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[10px] text-left transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-left text-[10px] transition-colors"
           >
             <span>
               {version.latest.isPrerelease ? 'Beta' : 'Stable'} {version.latest.tag} available
@@ -143,11 +143,7 @@ function VersionDisplay() {
       </div>
 
       {version.updateAvailable && version.latest && (
-        <UpdateDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          version={version}
-        />
+        <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} version={version} />
       )}
     </>
   );

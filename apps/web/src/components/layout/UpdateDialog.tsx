@@ -70,10 +70,8 @@ export function UpdateDialog({ open, onOpenChange, version }: UpdateDialogProps)
           </div>
           <DialogDescription className="flex items-center gap-2 pt-1">
             <span className="text-muted-foreground">{currentDisplay}</span>
-            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-            <span className="font-medium text-green-600 dark:text-green-400">
-              {latestDisplay}
-            </span>
+            <ArrowRight className="text-muted-foreground h-3 w-3" />
+            <span className="font-medium text-green-600 dark:text-green-400">{latestDisplay}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -86,12 +84,12 @@ export function UpdateDialog({ open, onOpenChange, version }: UpdateDialogProps)
           {/* Release notes */}
           {latest.releaseNotes && (
             <div className="space-y-2">
-              <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+              <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                 Release Notes
               </div>
               <ScrollArea className="h-48 rounded-md border p-3">
                 <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                  <pre className="font-sans text-sm leading-relaxed whitespace-pre-wrap">
                     {latest.releaseNotes}
                   </pre>
                 </div>
@@ -101,7 +99,7 @@ export function UpdateDialog({ open, onOpenChange, version }: UpdateDialogProps)
 
           {/* Update command */}
           <div className="space-y-2">
-            <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               Update Command
             </div>
             <div className="bg-muted flex items-center gap-2 rounded-md p-3 font-mono text-sm">
