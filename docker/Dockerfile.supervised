@@ -100,8 +100,8 @@ COPY --from=builder /app/apps/server/src/db/migrations ./apps/server/src/db/migr
 # GeoIP database (bundled for geolocation features)
 COPY data/GeoLite2-City.mmdb ./data/GeoLite2-City.mmdb
 
-# Install production dependencies
-RUN pnpm install --prod --frozen-lockfile
+# Install production dependencies (ignore-scripts prevents prepare/husky from running)
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Create tracearr user for running the application (non-root)
 RUN groupadd --system --gid 1001 tracearr \
