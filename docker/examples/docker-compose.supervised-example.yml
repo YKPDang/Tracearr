@@ -16,6 +16,7 @@
 #   PORT=3000              # External port mapping
 #   TZ=UTC                 # Timezone (e.g., America/New_York)
 #   LOG_LEVEL=info         # Log level (debug, info, warn, error)
+#   PG_MAX_MEMORY=2GB      # PostgreSQL memory limit (auto-detected from mem_limit)
 
 services:
   tracearr:

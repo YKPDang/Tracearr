@@ -181,11 +181,52 @@ chown -R tracearr:tracearr /app
 # =============================================================================
 # timescaledb-tune automatically optimizes PostgreSQL settings based on
 # available RAM and CPU. Safe to run repeatedly - recalculates if resources change.
+#
+# IMPORTANT: timescaledb-tune reads /proc/meminfo which shows HOST memory,
+# not container limits. We detect container memory limits and pass them explicitly.
 if command -v timescaledb-tune &> /dev/null; then
-    log "Tuning PostgreSQL for available resources..."
-    timescaledb-tune --pg-config=/usr/lib/postgresql/15/bin/pg_config \
-        --conf-path=/data/postgres/postgresql.conf \
-        --yes --quiet 2>/dev/null || warn "timescaledb-tune failed (non-fatal)"
+    TUNE_MEMORY=""
+    MEMORY_SOURCE=""
+
+    # Priority 1: User-specified memory limit via environment variable
+    if [ -n "${PG_MAX_MEMORY:-}" ]; then
+        TUNE_MEMORY="$PG_MAX_MEMORY"
+        MEMORY_SOURCE="PG_MAX_MEMORY"
+    # Priority 2: Detect container cgroup v2 memory limit (modern Docker/Kubernetes)
+    elif [ -f /sys/fs/cgroup/memory.max ]; then
+        CGROUP_LIMIT=$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo "max")
+        if [ "$CGROUP_LIMIT" != "max" ] && [ -n "$CGROUP_LIMIT" ]; then
+            # Convert bytes to MB
+            CGROUP_MB=$((CGROUP_LIMIT / 1024 / 1024))
+            TUNE_MEMORY="${CGROUP_MB}MB"
+            MEMORY_SOURCE="cgroup v2"
+        fi
+    # Priority 3: Detect container cgroup v1 memory limit (older systems)
+    elif [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+        CGROUP_LIMIT=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo "0")
+        # Check if it's not the "unlimited" value (very large number ~9 exabytes)
+        if [ -n "$CGROUP_LIMIT" ] && [ "$CGROUP_LIMIT" -gt 0 ] && [ "$CGROUP_LIMIT" -lt 9223372036854771712 ]; then
+            CGROUP_MB=$((CGROUP_LIMIT / 1024 / 1024))
+            TUNE_MEMORY="${CGROUP_MB}MB"
+            MEMORY_SOURCE="cgroup v1"
+        fi
+    fi
+
+    if [ -n "$TUNE_MEMORY" ]; then
+        log "Tuning PostgreSQL for $TUNE_MEMORY ($MEMORY_SOURCE)..."
+        timescaledb-tune --pg-config=/usr/lib/postgresql/15/bin/pg_config \
+            --conf-path=/data/postgres/postgresql.conf \
+            --memory="$TUNE_MEMORY" \
+            --yes --quiet 2>/dev/null || warn "timescaledb-tune failed (non-fatal)"
+    else
+        # No container limit detected - use host memory (default behavior)
+        # This may over-allocate if container has mem_limit set but cgroup detection failed
+        warn "No container memory limit detected - tuning for host memory"
+        warn "If using mem_limit in compose, set PG_MAX_MEMORY to match (e.g., PG_MAX_MEMORY=2GB)"
+        timescaledb-tune --pg-config=/usr/lib/postgresql/15/bin/pg_config \
+            --conf-path=/data/postgres/postgresql.conf \
+            --yes --quiet 2>/dev/null || warn "timescaledb-tune failed (non-fatal)"
+    fi
 fi
 
 # =============================================================================

@@ -79,6 +79,8 @@ Uses PostgreSQL 18 with TimescaleDB HA image. Includes Toolkit extension.
 
 The supervised container runs PostgreSQL, Redis, and Node.js. With less than 2GB RAM, the container will be killed by the OOM killer (exit code 137) and crash-loop.
 
+**Container Memory Limits:** If you set `mem_limit` in Docker Compose, the container will auto-detect this limit and tune PostgreSQL accordingly. If auto-detection fails (e.g., nested containers), set `PG_MAX_MEMORY` explicitly to match your `mem_limit`.
+
 ---
 
 ## Portainer Deployment
@@ -124,6 +126,12 @@ That's it! No environment variables needed.
 | `LOG_LEVEL`   | `info`     | Log verbosity (debug, info, warn, error) |
 | `DB_PASSWORD` | `tracearr` | Database password (standard only)        |
 | `CORS_ORIGIN` | `*`        | Allowed CORS origins                     |
+
+### Supervised-Only
+
+| Variable        | Default      | Description                                          |
+| --------------- | ------------ | ---------------------------------------------------- |
+| `PG_MAX_MEMORY` | Auto-detect  | PostgreSQL memory limit (e.g., `2GB`). Set if using `mem_limit` and auto-detection fails. |
 
 For all configuration options, see the [main README](../../README.md#configuration).
 
