@@ -94,8 +94,9 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
     let alertsLast24h: number;
     let activeUsersToday: number;
 
+    const MIN_PLAY_DURATION_MS = 120000;
+
     if (!serverId && authUser.role === 'owner') {
-      // Owner with no filter - use prepared statements + engagement query
       const [
         todayPlaysResult,
         watchTimeResult,
@@ -107,13 +108,11 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
         watchTimeSince.execute({ since: todayStart }),
         violationsCountSince.execute({ since: last24h }),
         uniqueUsersSince.execute({ since: todayStart }),
-        // Validated plays from engagement aggregate (sessions >= 2 min)
-        // Note: The continuous aggregate buckets by UTC day, so we need to truncate
-        // todayStart to UTC day boundary to include today's bucket
         db.execute(sql`
-            SELECT COALESCE(SUM(valid_session_count), 0)::int as count
-            FROM daily_content_engagement
-            WHERE day >= date_trunc('day', ${todayStart}::timestamptz)
+            SELECT COUNT(DISTINCT COALESCE(reference_id, id))::int as count
+            FROM sessions
+            WHERE (started_at AT TIME ZONE ${tz})::date = (NOW() AT TIME ZONE ${tz})::date
+              AND duration_ms >= ${MIN_PLAY_DURATION_MS}
           `),
       ]);
 
@@ -160,18 +159,17 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
         return sql``;
       };
 
-      // Build server filter for engagement aggregate
-      const buildEngagementServerFilter = () => {
+      const buildSessionServerFilter = () => {
         if (serverId) {
-          return sql`AND server_id = ${serverId}::uuid`;
+          return sql`AND server_id = ${serverId}`;
         }
         if (authUser.role !== 'owner') {
           if (authUser.serverIds.length === 0) {
             return sql`AND false`;
           } else if (authUser.serverIds.length === 1) {
-            return sql`AND server_id = ${authUser.serverIds[0]}::uuid`;
+            return sql`AND server_id = ${authUser.serverIds[0]}`;
           } else {
-            const serverIdList = authUser.serverIds.map((id: string) => sql`${id}::uuid`);
+            const serverIdList = authUser.serverIds.map((id: string) => sql`${id}`);
             return sql`AND server_id IN (${sql.join(serverIdList, sql`, `)})`;
           }
         }
@@ -223,14 +221,12 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
           .from(sessions)
           .where(and(...buildSessionConditions(todayStart))),
 
-        // Validated plays from engagement aggregate (sessions >= 2 min)
-        // Note: The continuous aggregate buckets by UTC day, so we need to truncate
-        // todayStart to UTC day boundary to include today's bucket
         db.execute(sql`
-            SELECT COALESCE(SUM(valid_session_count), 0)::int as count
-            FROM daily_content_engagement
-            WHERE day >= date_trunc('day', ${todayStart}::timestamptz)
-            ${buildEngagementServerFilter()}
+            SELECT COUNT(DISTINCT COALESCE(reference_id, id))::int as count
+            FROM sessions
+            WHERE (started_at AT TIME ZONE ${tz})::date = (NOW() AT TIME ZONE ${tz})::date
+              AND duration_ms >= ${MIN_PLAY_DURATION_MS}
+            ${buildSessionServerFilter()}
           `),
       ]);
 

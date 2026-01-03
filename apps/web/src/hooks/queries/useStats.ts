@@ -17,8 +17,10 @@ export function useDashboardStats(serverId?: string | null) {
 }
 
 export function usePlaysStats(timeRange?: StatsTimeRange, serverId?: string | null) {
+  // Include timezone in cache key since plays are grouped by local day
+  const timezone = getBrowserTimezone();
   return useQuery({
-    queryKey: ['stats', 'plays', timeRange, serverId],
+    queryKey: ['stats', 'plays', timeRange, serverId, timezone],
     queryFn: () => api.stats.plays(timeRange ?? { period: 'week' }, serverId ?? undefined),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

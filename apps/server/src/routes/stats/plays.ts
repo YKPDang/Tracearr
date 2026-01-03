@@ -78,8 +78,7 @@ export const playsRoutes: FastifyPluginAsync = async (app) => {
    * GET /plays - Plays over time (engagement-based)
    *
    * Returns validated plays (sessions >= 2 min) grouped by day.
-   * Uses the daily_content_engagement view for consistent counting
-   * with the dashboard stats.
+   * Uses timezone-aware day bucketing so plays are grouped by user's local day.
    */
   app.get('/plays', { preHandler: [app.authenticate] }, async (request, reply) => {
     const query = statsQuerySchema.safeParse(request.query);
@@ -87,9 +86,11 @@ export const playsRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest('Invalid query parameters');
     }
 
-    const { period, startDate, endDate, serverId } = query.data;
+    const { period, startDate, endDate, serverId, timezone } = query.data;
     const authUser = request.user;
     const dateRange = resolveDateRange(period, startDate, endDate);
+    // Default to UTC for backwards compatibility
+    const tz = timezone ?? 'UTC';
 
     // Validate server access if specific server requested
     if (serverId) {
@@ -99,28 +100,26 @@ export const playsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const serverFilter = buildEngagementServerFilter(serverId, authUser);
+    const serverFilter = buildSessionServerFilter(serverId, authUser);
 
-    // Build date filter for the engagement view (day column is UTC-bucketed)
-    const dateFilter = dateRange.start
-      ? sql`WHERE day >= date_trunc('day', ${dateRange.start}::timestamptz)`
-      : sql`WHERE true`;
-    const endDateFilter =
-      period === 'custom' && dateRange.end
-        ? sql`AND day < date_trunc('day', ${dateRange.end}::timestamptz) + interval '1 day'`
-        : sql``;
+    // Query sessions table directly with timezone-aware day bucketing
+    const baseWhere = dateRange.start
+      ? sql`WHERE started_at >= ${dateRange.start} AND duration_ms >= ${MIN_PLAY_DURATION_MS}`
+      : sql`WHERE duration_ms >= ${MIN_PLAY_DURATION_MS}`;
 
-    // Query engagement view for validated plays per day
+    const endDateWhere =
+      period === 'custom' && dateRange.end ? sql`AND started_at < ${dateRange.end}` : sql``;
+
     const result = await db.execute(sql`
         SELECT
-          day::date::text as date,
-          COALESCE(SUM(valid_session_count), 0)::int as count
-        FROM daily_content_engagement
-        ${dateFilter}
-        ${endDateFilter}
+          (started_at AT TIME ZONE ${tz})::date::text as date,
+          COUNT(DISTINCT COALESCE(reference_id, id))::int as count
+        FROM sessions
+        ${baseWhere}
+        ${endDateWhere}
         ${serverFilter}
-        GROUP BY day
-        ORDER BY day
+        GROUP BY (started_at AT TIME ZONE ${tz})::date
+        ORDER BY (started_at AT TIME ZONE ${tz})::date
       `);
 
     return { data: result.rows as { date: string; count: number }[] };
