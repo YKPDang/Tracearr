@@ -82,19 +82,19 @@
     "mph": "mph"
   },
   "validation": {
-    "required": "Dieses Feld ist erforderlich",
-    "invalidEmail": "Bitte eine gültige E-Mail-Adresse eingeben",
-    "invalidUrl": "Bitte eine gültige URL eingeben",
+    "required": "Erforderlich",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidUrl": "Ungültige URL",
     "minLength": "Muss mindestens {{min}} Zeichen lang sein",
     "maxLength": "Darf höchstens {{max}} Zeichen lang sein"
   },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten",
-    "networkError": "Netzwerkverbindung fehlgeschlagen",
-    "unauthorized": "Keine Berechtigung für diese Aktion",
+    "networkError": "Netzwerkfehler",
+    "unauthorized": "Keine Berechtigung",
     "notFound": "Nicht gefunden",
     "serverError": "Serverfehler",
-    "timeout": "Zeitüberschreitung der Anfrage",
+    "timeout": "Zeitüberschreitung",
     "forbidden": "Zugriff verweigert",
     "badRequest": "Ungültige Anfrage",
     "conflict": "Ein Konflikt ist aufgetreten",

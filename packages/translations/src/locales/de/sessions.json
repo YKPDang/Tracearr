@@ -1,6 +1,6 @@
 {
   "states": {
-    "playing": "Wird abgespielt",
+    "playing": "Läuft",
     "paused": "Pausiert",
     "stopped": "Gestoppt"
   },
@@ -32,7 +32,7 @@
   },
   "empty": {
     "noActiveStreams": "Keine aktiven Streams",
-    "streamsWillAppear": "Streams werden hier angezeigt, wenn Benutzer mit dem Anschauen beginnen"
+    "streamsWillAppear": "Streams werden hier angezeigt, wenn Benutzer anfangen zu schauen"
   },
   "terminate": {
     "title": "Stream beenden",

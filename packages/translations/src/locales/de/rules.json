@@ -30,7 +30,7 @@
   },
   "modes": {
     "blocklist": "Sperrliste (diese Länder blockieren)",
-    "allowlist": "Erlaubnisliste (nur diese Länder erlauben)"
+    "allowlist": "Freigabeliste (nur diese Länder erlauben)"
   },
   "messages": {
     "created": "Regel erfolgreich erstellt",
